@@ -1,0 +1,151 @@
+import requests
+import pandas as pd
+from .exceptions import ServerReturnsInvalidStatusCode
+from datetime import timedelta
+from calendar import monthrange
+from dateutil.relativedelta import relativedelta
+
+__title__ = "jao-py"
+__version__ = "0.1.0"
+__author__ = "Frank Boerman"
+__license__ = "MIT"
+
+
+class JaoAPIClient:
+    # this pulls from the same api as the frontend pulls from
+    # requires no further api key
+
+    BASEURL = "https://www.jao.eu/api/v1"
+
+    def __init__(self):
+        self.s = requests.Session()
+        self.s.headers.update({
+            'user-agent': 'jao-py (github.com/fboerman/jao-py)'
+        })
+
+    def query_auction_corridors(self):
+        r = self.s.post(self.BASEURL + '/auction/calls/getcorridors', json={})
+        if r.status_code != 200:
+            raise ServerReturnsInvalidStatusCode
+        return [x['value'] for x in r.json()]
+
+    def query_auction_horizons(self):
+        r = self.s.post(self.BASEURL + '/auction/calls/gethorizons', json={})
+        if r.status_code != 200:
+            raise ServerReturnsInvalidStatusCode
+        return [x['value'] for x in r.json()]
+
+    def query_auction_details_by_month(self, corridor, month):
+        """
+        get the auction data for a specified month. gives basically everything but the bids themselves
+
+        :param corridor: string of a valid jao corridor from query_corridors
+        :param month: datetime.date object for the month you want the auction data of
+        :return:
+        """
+        # prepare the specific input arguments needed, start day the day before the months begin
+        # end date the last day of the month
+
+        month_begin = month.replace(day=1)
+        month_end = month.replace(day=monthrange(month.year, month.month)[1])
+        r = self.s.post(self.BASEURL + '/auction/calls/getauctions', json={
+            'corridor': corridor,
+            'fromdate': (month_begin - timedelta(days=1)).strftime("%Y-%m-%d"),
+            'horizon': 'Monthly',
+            "todate": month_end.strftime("%Y-%m-%d")})
+
+        if r.status_code != 200:
+            raise ServerReturnsInvalidStatusCode
+
+        data = r.json()
+        # pretifie the results since we know it is for monthly auction
+        data = data[0]
+        data = {**data, **data['results'][0], **data['products'][0]}
+        del data['results']
+        del data['products']
+
+        return data
+
+    def query_auction_bids_by_month(self, corridor, month, as_dict=False):
+        """
+        wrapper function to construct the auction id since its predictable and
+          pass it on to the query function for the bids
+
+        :param corridor: string of a valid jao corridor from query_corridors
+        :param month: datetime.date object for the month you want the auction bids of
+        :param as_dict: boolean wether the result needs to be returned as a dictionary instead of a dataframe
+        :return:
+        """
+
+        return self.query_auction_bids_by_id(month.strftime(f"{corridor}-M-BASE-------%y%m01-01"), as_dict=as_dict)
+
+    def query_auction_bids_by_id(self, auction_id, as_dict=False):
+        r = self.s.post(self.BASEURL + "/auction/calls/getbids", json={
+            "auctionid": auction_id
+        })
+
+        if r.status_code != 200:
+            raise ServerReturnsInvalidStatusCode
+
+        if as_dict:
+            return r.json()
+        else:
+            return pd.DataFrame(data)
+
+
+    def query_auction_stats_months(self, month_from, month_to, corridor):
+        """
+        gets the following statistics for the give range of months (included both ends) in a dataframe:
+        id
+        corridor
+        month
+        auction start
+        auction ended
+        offered capacity (MW)
+        ATC (MW)
+        allocated capacity (MW)
+        resold capacity (MW)
+        requested capacity (MW)
+        price (EUR/MW)
+        non allocated capacity (MW)
+        in this order
+
+        :param month_from: datetime.date object of start month
+        :param month_to: datetime.date object of end month
+        :param corridor: string of a valid jao corridor from query_corridors
+        :return:
+        """
+        detail_keys = ['bidGateOpening', 'bidGateClosure', 'offeredCapacity', 'atc',
+                        'allocatedCapacity', 'resoldCapacity', 'requestedCapacity', 'auctionPrice']
+
+        data = []
+        m = month_from
+        while m <= month_to:
+            m_details = self.query_auction_details_by_month(corridor, m)
+            m_data = {
+                'id': m_details['identification'],
+                'corridor': corridor,
+                'month': m.replace(day=1)
+            }
+            m_data = {**m_data, **{k: v for k, v in m_details.items() if k in detail_keys}}
+            data.append(m_data)
+            m += relativedelta(months=1)
+        df = pd.DataFrame(data)
+        df['resoldCapacity'].fillna(0, inplace=True)
+        df['nonAllocatedCapacity'] = df['offeredCapacity'] - df['allocatedCapacity']
+
+        return df
+
+
+class JaoUtilityToolASMXClient:
+    # from the ASMX Web Service API, this is a very good defined system
+    #   which supplies the endpoint and formats in xml upfront. this is delegate to the suds package
+
+    pass
+
+
+class JaoUtilityToolXmlClient:
+    # uses the xml download from the utility tool website at https://www.jao.eu/implict-allocation
+    # this requires solving a recaptcha by the user
+
+    pass

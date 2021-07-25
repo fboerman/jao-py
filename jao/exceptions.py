@@ -1,0 +1,2 @@
+class ServerReturnsInvalidStatusCode(Exception):
+    pass
