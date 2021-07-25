@@ -58,7 +58,7 @@ class JaoAPIClient:
             raise ServerReturnsInvalidStatusCode
 
         data = r.json()
-        # pretifie the results since we know it is for monthly auction
+        # pretify the results since we know it is for monthly auction
         data = data[0]
         data = {**data, **data['results'][0], **data['products'][0]}
         del data['results']
@@ -90,7 +90,7 @@ class JaoAPIClient:
         if as_dict:
             return r.json()
         else:
-            return pd.DataFrame(data)
+            return pd.DataFrame(r.json())
 
 
     def query_auction_stats_months(self, month_from, month_to, corridor):
