@@ -2,3 +2,6 @@ requests
 pandas
 suds-community
 python-dateutil
+pillow
+beautifulsoup4
+lxml

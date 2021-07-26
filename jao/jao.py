@@ -1,9 +1,15 @@
 import requests
 import pandas as pd
-from .exceptions import ServerReturnsInvalidStatusCode
-from datetime import timedelta
+from .exceptions import *
+from datetime import timedelta, date
 from calendar import monthrange
 from dateutil.relativedelta import relativedelta
+from suds.client import Client as suds_Client
+from functools import wraps
+from PIL import Image
+from io import BytesIO
+from parsers import _parse_utility_tool_xml
+
 
 __title__ = "jao-py"
 __version__ = "0.1.0"
@@ -140,12 +146,103 @@ class JaoAPIClient:
 class JaoUtilityToolASMXClient:
     # from the ASMX Web Service API, this is a very good defined system
     #   which supplies the endpoint and formats in xml upfront. this is delegate to the suds package
+    #   so this is only a very simple wrapper
+    # TODO: some known methods are wrapped so that they return a proper dataframe
 
-    pass
+    def __init__(self):
+        # all communication goes through the sud package, since the schemas are defined in the WSDL
+        self.client = suds_Client("http://utilitytool.jao.eu/CascUtilityWebService.asmx?WSDL")
+
+    def help(self):
+        """
+        this prints the scheme as defined by the WSDL format and parsed by the suds package
+
+        :return:
+        """
+        print(str(self.client))
+
+
+def captcha(func):
+    """
+    check if captcha is already solved and otherwise request one and solve it
+
+    :param func:
+    :return:
+    """
+    @wraps(func)
+    def captcha_wrapper(*args, **kwargs):
+        self = args[0]
+
+        # atm the only check is if we have ever done the captcha
+        #  later add checks if it has expired (does it even expire?)
+        if self.captcha is None:
+            r = self.s.get(self.BASEURL + "/Captcha/Show")
+            if r.status_code != 200:
+                raise ServerReturnsInvalidStatusCode
+            png_stream = BytesIO(r.content)
+            png_stream.seek(0)
+            captcha_png = Image.open(png_stream)
+            captcha_png.show()
+            captcha_code = input("Captcha: ")
+            r = self.s.get(self.BASEURL + "/Util/Validate", params={
+                'captchaValue': captcha_code
+            })
+            if r.status_code != 200:
+                raise InvalidCaptcha
+            if r.text != 'True':
+                raise InvalidCaptcha
+            self.captcha = captcha_code
+
+        return func(*args, **kwargs)
+
+    return captcha_wrapper
 
 
 class JaoUtilityToolXmlClient:
     # uses the xml download from the utility tool website at https://www.jao.eu/implict-allocation
     # this requires solving a recaptcha by the user
 
-    pass
+    BASEURL = "https://utilitytool.jao.eu"
+
+    def __init__(self):
+        self.s = requests.Session()
+        self.s.headers.update({
+            'user-agent': 'jao-py (github.com/fboerman/jao-py)'
+        })
+        self.captcha = None
+
+    @captcha
+    def query_xml(self, date_from, date_to):
+        """
+        download the utility tool xml file with given dates, returns the raw xml
+
+        :param date_from:
+        :param date_to:
+        :return:
+        """
+        r = self.s.post(self.BASEURL + '/Util/Download', data={
+            'Date': date.today().strftime("%Y/%m/%d"),
+            'fileType': 'Xml',
+            'FromDate': date_from.strftime("%Y/%m/%d"),
+            'ToDate': date_to.strftime("%Y/%m/%d"),
+            'CaptchaValue': self.captcha,
+            'InvisibleCaptchaValue': '',
+            'force': 'false',
+        })
+
+        if r.status_code != 200:
+            raise ServerReturnsInvalidStatusCode
+
+        return r.content
+
+    def query_df(self, date_from, date_to, t):
+        """
+        downloads the utility tool xml file and parses the selected data type from the response into a dataframe
+
+        :param date_from:
+        :param date_to:
+        :param t: which type to parse, choose from "MaxExchanges", "MaxNetPositions", "Ptdfs"
+        :return:
+        """
+
+        return _parse_utility_tool_xml(self.query_xml(date_from, date_to), t)
