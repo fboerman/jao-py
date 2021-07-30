@@ -8,7 +8,7 @@ from suds.client import Client as suds_Client
 from functools import wraps
 from PIL import Image
 from io import BytesIO
-from parsers import _parse_utility_tool_xml
+from .parsers import _parse_utility_tool_xml
 
 
 __title__ = "jao-py"
