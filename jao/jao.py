@@ -7,7 +7,7 @@ from dateutil.relativedelta import relativedelta
 from suds.client import Client as suds_Client
 from functools import wraps
 from PIL import Image
-from io import BytesIO
+from io import BytesIO, StringIO
 from .parsers import _parse_utility_tool_xml
 
 
