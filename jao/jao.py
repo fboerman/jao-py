@@ -163,7 +163,7 @@ class JaoUtilityToolASMXClient:
 
 
 class JaoUtilityToolCSVClient:
-    # this ingests from the same client the excell macros in the utility tool is talking too
+    # this ingests from the same client the excel macros in the utility tool is talking too
     # because of this the endpoints are open and thus no key or captcha is required
     def __init__(self):
         self.s = requests.Session()
