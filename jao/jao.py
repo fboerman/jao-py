@@ -7,7 +7,7 @@ from dateutil.relativedelta import relativedelta
 from suds.client import Client as suds_Client
 from functools import wraps
 from PIL import Image
-from io import BytesIO
+from io import BytesIO, StringIO
 from .parsers import _parse_utility_tool_xml
 
 
@@ -160,6 +160,77 @@ class JaoUtilityToolASMXClient:
         :return:
         """
         print(str(self.client))
+
+
+class JaoUtilityToolCSVClient:
+    # this ingests from the same client the excell macros in the utility tool is talking too
+    # because of this the endpoints are open and thus no key or captcha is required
+    def __init__(self):
+        self.s = requests.Session()
+        self.s.headers.update({
+            'user-agent': 'jao-py (github.com/fboerman/jao-py)'
+        })
+
+    def query_final_flowbased_domain(self, d):
+        """
+        Downloads the final flowbased of the business day of the given date object
+        returns a dataframe with the data. This endpoint is relatively slow so we download one day per request
+        for multiple days call this function repeatedly and pd.concat the dataframes
+
+        :param d: datetime.date object
+        """
+
+        url = f"https://utilitytool.jao.eu/CSV/GetAllCBCOFixedLabelDataForAPeriod?dateFrom={d.strftime('%m-%d-%Y')}&" \
+              f"dateTo={d.strftime('%m-%d-%Y')}&random=1"
+        r = self.s.get(url)
+
+        lines = r.text.replace(';|', "|").split('\r\n')
+        lines[0] = lines[0].replace(';', '|')
+
+        lines = r.text.replace(';|', "|").split('\r\n')
+        lines[0] = lines[0].replace(';', '|')
+
+        stream = StringIO()
+        stream.write("\n".join(lines))
+        stream.seek(0)
+
+        df = pd.read_csv(stream, sep="|")
+
+        df = df[['DeliveryDate', 'Period', 'OutageName', 'OutageEIC', 'CriticalBranchName', 'CriticalBranchEIC',
+                 'Presolved',
+                 'RemainingAvailableMargin', 'Fmax', 'Fref', 'AMR', 'MinRAMFactor', 'MinRAMFactorJustification']]
+
+        df['DeliveryDate'] = pd.to_datetime(df['DeliveryDate'])
+        df['DeliveryDate'] = df.apply(lambda row: row['DeliveryDate'].replace(hour=row['Period'] - 1), axis=1)
+        df = df.rename(columns={'DeliveryDate': 'timestamp'}).drop(columns=['Period'])
+
+        # filter on cnecs that have a valid dutch justification string and are not lta
+        # make sure to make copy to prevent slice errors later
+        df = df[(df['MinRAMFactorJustification'].str.contains('MACZTtarget').fillna(False)) &
+                ~(df['CriticalBranchName'].str.contains('LTA_corner'))].copy()
+
+        df['MCCC_PCT'] = 100 * df['RemainingAvailableMargin'] / df['Fmax']
+
+        df[['MNCC_PCT', 'LF_CALC_PCT', 'LF_ACCEPT_PCT', 'MACZT_TARGET_PCT']] = \
+            df['MinRAMFactorJustification'].str.extract(
+                r'MNCC = (?P<MNCC_PCT>.*)%;LFcalc = (?P<LF_CALC_PCT>.*)%;LFaccept = (?P<LF_ACCEPT_PCT>.*)%;MACZTtarget = (?P<MACZT_TARGET_PCT>.*)%')
+        df[['MCCC_PCT', 'MNCC_PCT', 'LF_CALC_PCT', 'LF_ACCEPT_PCT', 'MACZT_TARGET_PCT']] = \
+            df[['MCCC_PCT', 'MNCC_PCT', 'LF_CALC_PCT', 'LF_ACCEPT_PCT', 'MACZT_TARGET_PCT']].astype(float)
+
+        df['MACZT_PCT'] = df['MCCC_PCT'] + df['MNCC_PCT']
+        df['LF_SUB_PCT'] = (df['LF_CALC_PCT'] - df['LF_ACCEPT_PCT']).clip(lower=0)
+        df['MACZT_MIN_PCT'] = df['MACZT_TARGET_PCT'] - df['LF_SUB_PCT']
+        df['MACZT_MARGIN'] = df['MACZT_PCT'] - df['MACZT_MIN_PCT']
+
+        df.drop(columns=['MinRAMFactorJustification'], inplace=True)
+        df.rename(columns={
+            'OutageName': 'CO',
+            'OutageEIC': 'CO_EIC',
+            'CriticalBranchName': 'CNE',
+            'CriticalBranchEIC': 'CNE_EIC'
+        })
+
+        return df
 
 
 def captcha(func):
