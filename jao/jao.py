@@ -12,7 +12,7 @@ from .parsers import _parse_utility_tool_xml
 
 
 __title__ = "jao-py"
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
