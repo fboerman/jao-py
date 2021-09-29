@@ -8,7 +8,7 @@ from suds.client import Client as suds_Client
 from functools import wraps
 from PIL import Image
 from io import BytesIO, StringIO
-from .parsers import _parse_utility_tool_xml
+from .parsers import _parse_utility_tool_xml, _parse_maczt_final_flowbased_domain
 
 
 __title__ = "jao-py"
@@ -196,41 +196,32 @@ class JaoUtilityToolCSVClient:
 
         df = pd.read_csv(stream, sep="|")
 
-        df = df[['DeliveryDate', 'Period', 'OutageName', 'OutageEIC', 'CriticalBranchName', 'CriticalBranchEIC',
-                 'Presolved',
-                 'RemainingAvailableMargin', 'Fmax', 'Fref', 'AMR', 'MinRAMFactor', 'MinRAMFactorJustification']]
-
         df['DeliveryDate'] = pd.to_datetime(df['DeliveryDate'])
         df['DeliveryDate'] = df.apply(lambda row: row['DeliveryDate'].replace(hour=row['Period'] - 1), axis=1)
-        df = df.rename(columns={'DeliveryDate': 'timestamp'}).drop(columns=['Period'])
-
-        # filter on cnecs that have a valid dutch justification string and are not lta
-        # make sure to make copy to prevent slice errors later
-        df = df[(df['MinRAMFactorJustification'].str.contains('MACZTtarget').fillna(False)) &
-                ~(df['CriticalBranchName'].str.contains('LTA_corner'))].copy()
-
-        df['MCCC_PCT'] = 100 * df['RemainingAvailableMargin'] / df['Fmax']
-
-        df[['MNCC_PCT', 'LF_CALC_PCT', 'LF_ACCEPT_PCT', 'MACZT_TARGET_PCT']] = \
-            df['MinRAMFactorJustification'].str.extract(
-                r'MNCC = (?P<MNCC_PCT>.*)%;LFcalc = (?P<LF_CALC_PCT>.*)%;LFaccept = (?P<LF_ACCEPT_PCT>.*)%;MACZTtarget = (?P<MACZT_TARGET_PCT>.*)%')
-        df[['MCCC_PCT', 'MNCC_PCT', 'LF_CALC_PCT', 'LF_ACCEPT_PCT', 'MACZT_TARGET_PCT']] = \
-            df[['MCCC_PCT', 'MNCC_PCT', 'LF_CALC_PCT', 'LF_ACCEPT_PCT', 'MACZT_TARGET_PCT']].astype(float)
-
-        df['MACZT_PCT'] = df['MCCC_PCT'] + df['MNCC_PCT']
-        df['LF_SUB_PCT'] = (df['LF_CALC_PCT'] - df['LF_ACCEPT_PCT']).clip(lower=0)
-        df['MACZT_MIN_PCT'] = df['MACZT_TARGET_PCT'] - df['LF_SUB_PCT']
-        df['MACZT_MARGIN'] = df['MACZT_PCT'] - df['MACZT_MIN_PCT']
-
-        df.drop(columns=['MinRAMFactorJustification'], inplace=True)
-        df.rename(columns={
-            'OutageName': 'CO',
-            'OutageEIC': 'CO_EIC',
-            'CriticalBranchName': 'CNE',
-            'CriticalBranchEIC': 'CNE_EIC'
-        })
+        df = df.rename(columns={'DeliveryDate': 'timestamp'}).drop(columns=['Period']).set_index('timestamp')
+        df = df.tz_localize('Europe/Amsterdam')
 
         return df
+
+    def query_maczt(self, d, zone='NL'):
+        """
+        Extract the MACZT numbers from the final flowbased domain.
+        Calls the query_final_flowbased_domain function and has thus the same limitation about
+                being relatively slow and only one day per call
+        For now only the NL zone is supported
+
+        :param d: datetime.date object
+        :param zone: str of the selected zone
+        :return:
+        """
+
+        if zone != 'NL':
+            raise NotImplementedError
+
+        return _parse_maczt_final_flowbased_domain(
+            self.query_final_flowbased_domain(d),
+            zone=zone
+        )
 
 
 def captcha(func):
