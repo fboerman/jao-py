@@ -12,7 +12,7 @@ from .parsers import _parse_utility_tool_xml, _parse_maczt_final_flowbased_domai
 
 
 __title__ = "jao-py"
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -196,7 +196,7 @@ class JaoUtilityToolCSVClient:
 
         df = pd.read_csv(stream, sep="|")
 
-        df['DeliveryDate'] = pd.to_datetime(df['DeliveryDate'])
+        df['DeliveryDate'] = pd.to_datetime(df['DeliveryDate'], format='%d/%m/%Y %H:%M:%S')
         df['DeliveryDate'] = df.apply(lambda row: row['DeliveryDate'].replace(hour=row['Period'] - 1), axis=1)
         df = df.rename(columns={'DeliveryDate': 'timestamp'}).drop(columns=['Period']).set_index('timestamp')
         df = df.tz_localize('Europe/Amsterdam')
