@@ -12,7 +12,7 @@ from .parsers import _parse_utility_tool_xml, _parse_maczt_final_flowbased_domai
 
 
 __title__ = "jao-py"
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -276,7 +276,7 @@ class JaoUtilityToolXmlClient:
     @captcha
     def query_xml(self, date_from, date_to):
         """
-        download the utility tool xml file with given dates, returns the raw xml
+        download the utility tool xml file with given dates, returns the raw xml in bytes
 
         :param date_from:
         :param date_to:

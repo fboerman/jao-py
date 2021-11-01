@@ -35,11 +35,18 @@ def _parse_utility_tool_xml(xml, t):
     """
     parses the xml coming out of the utility tool
 
-    :param xml: string of the xml data
+    :param xml: string or bytes of the xml data
     :param t: which type to parse, choose from "MaxExchanges", "MaxNetPositions", "Ptdfs"
     :return:
     """
-    tree = etree.fromstring(xml.encode('UTF-8'))
+    if type(xml) == str:
+        xml_b = xml.encode('UTF-8')
+    elif type(xml) == bytes:
+        xml_b = xml
+    else:
+        raise ValueError("xml should be provided in either bytes or string format")
+
+    tree = etree.fromstring(xml_b)
     # the node name is the singular of the type
     node_name = t.strip('s')
     # get all the column names by checking all the children tags of a node
