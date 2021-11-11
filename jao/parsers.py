@@ -112,4 +112,7 @@ def _parse_maczt_final_flowbased_domain(df, zone='NL'):
         'CriticalBranchEIC': 'CNE_EIC'
     })
 
+    # there is only two decimals statistical relevance here so round it at that
+    df[['MCCC_PCT', 'MACZT_PCT', 'LF_SUB_PCT', 'MACZT_MIN_PCT', 'MACZT_MARGIN']] = df[['MCCC_PCT', 'MACZT_PCT', 'LF_SUB_PCT', 'MACZT_MIN_PCT', 'MACZT_MARGIN']].round(2)
+
     return df
