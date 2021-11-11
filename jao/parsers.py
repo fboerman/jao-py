@@ -88,8 +88,9 @@ def _parse_maczt_final_flowbased_domain(df, zone='NL'):
 
     # filter on cnecs that have a valid dutch justification string and are not lta
     # make sure to make copy to prevent slice errors later
-    df = df[(df['MinRAMFactorJustification'].str.contains('MACZTtarget').fillna(False)) &
-            ~(df['CriticalBranchName'].str.contains('LTA_corner'))].copy()
+    df = df[df['MinRAMFactorJustification'].str.contains('MACZTtarget').fillna(False)]
+    df = df[~(df['CriticalBranchName'].str.contains('LTA_corner'))]
+    df = pd.DataFrame(df)
 
     df['MCCC_PCT'] = 100 * df['RemainingAvailableMargin'] / df['Fmax']
 
