@@ -216,7 +216,6 @@ class JaoUtilityToolCSVClient:
                 elif row['Period'] > 4: # after clock change
                     return row['DeliveryDate'].replace(hour=row['Period'] - 2)
             df['DeliveryDate'] = df.apply(_shift_hour, axis=1)
-            df['DeliveryDate'].dropna(inplace=True)
         elif df['Period'].max() < 24:
             # clock going forward so one hour less
             def _shift_hour(row):
@@ -228,6 +227,7 @@ class JaoUtilityToolCSVClient:
         else:
             # normal time
             df['DeliveryDate'] = df.apply(lambda row: row['DeliveryDate'].replace(hour=row['Period'] - 1), axis=1)
+        df.dropna(subset=['DeliveryDate'], inplace=True)
         df = df.rename(columns={'DeliveryDate': 'timestamp'}).drop(columns=['Period']).set_index('timestamp')
         df = df.tz_localize('Europe/Amsterdam', ambiguous=True)
 
