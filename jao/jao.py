@@ -13,7 +13,7 @@ import numpy as np
 
 
 __title__ = "jao-py"
-__version__ = "0.1.6"
+__version__ = "0.1.7"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -196,6 +196,10 @@ class JaoUtilityToolCSVClient:
         stream.seek(0)
 
         df = pd.read_csv(stream, sep="|")
+
+        # check if the dataframe is empty this means there were default flow parameters. then stop further processing
+        if len(df) == 0:
+            return df
 
         # parse the date string which is only the day
         df['DeliveryDate'] = pd.to_datetime(df['DeliveryDate'], format='%d/%m/%Y %H:%M:%S')

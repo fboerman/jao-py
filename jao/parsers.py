@@ -85,6 +85,10 @@ def _parse_maczt_final_flowbased_domain(df, zone='NL'):
     df = df[['OutageName', 'OutageEIC', 'CriticalBranchName', 'CriticalBranchEIC',
              'Presolved', 'RemainingAvailableMargin', 'Fmax', 'Fref', 'AMR', 'MinRAMFactor', 'MinRAMFactorJustification']]
 
+    # if there is a default parameter day there is an empty dataframe. stop further processing
+    if len(df) == 0:
+        return df
+
 
     # filter on cnecs that have a valid dutch justification string and are not lta
     # make sure to make copy to prevent slice errors later
