@@ -9,10 +9,11 @@ from functools import wraps
 from PIL import Image
 from io import BytesIO, StringIO
 from .parsers import _parse_utility_tool_xml, _parse_maczt_final_flowbased_domain
+import numpy as np
 
 
 __title__ = "jao-py"
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -196,10 +197,39 @@ class JaoUtilityToolCSVClient:
 
         df = pd.read_csv(stream, sep="|")
 
+        # parse the date string which is only the day
         df['DeliveryDate'] = pd.to_datetime(df['DeliveryDate'], format='%d/%m/%Y %H:%M:%S')
-        df['DeliveryDate'] = df.apply(lambda row: row['DeliveryDate'].replace(hour=row['Period'] - 1), axis=1)
+        # insert the hour into the date by combining with the Period column
+
+        # for DST: difficult problem. JAO gives everything in localtime, so we cant use the easy trick of everything in UTC and then later convert
+        # it also gives the hour only as a period number for that day
+        # for now this package solves it the following way: throwing away the double hour in case of clock going backwards
+        # and leaving the hour empty when clock is going forward.
+        # If a reader knows a better way please open an issue or pullrequest on github
+        if df['Period'].max() > 24:
+            # clock going backwards so one extra hour at hour
+            def _shift_hour(row):
+                if row['Period'] < 4: # before clock change
+                    return row['DeliveryDate'].replace(hour=row['Period'] - 1)
+                elif row['Period'] == 4: # during clock change
+                    return np.nan
+                elif row['Period'] > 4: # after clock change
+                    return row['DeliveryDate'].replace(hour=row['Period'] - 2)
+            df['DeliveryDate'] = df.apply(_shift_hour, axis=1)
+            df['DeliveryDate'].dropna(inplace=True)
+        elif df['Period'].max() < 24:
+            # clock going forward so one hour less
+            def _shift_hour(row):
+                if row['Period'] < 3: # before clock change
+                    return row['DeliveryDate'].replace(hour=row['Period'] - 1)
+                elif row['Period'] >= 3: # after clock change
+                    return row['DeliveryDate'].replace(hour=row['Period'])
+            df['DeliveryDate'] = df.apply(_shift_hour, axis=1)
+        else:
+            # normal time
+            df['DeliveryDate'] = df.apply(lambda row: row['DeliveryDate'].replace(hour=row['Period'] - 1), axis=1)
         df = df.rename(columns={'DeliveryDate': 'timestamp'}).drop(columns=['Period']).set_index('timestamp')
-        df = df.tz_localize('Europe/Amsterdam')
+        df = df.tz_localize('Europe/Amsterdam', ambiguous=True)
 
         return df
 
