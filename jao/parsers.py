@@ -69,6 +69,43 @@ def _parse_utility_tool_xml(xml, t):
 
     return df
 
+def _parse_utilitytool_cwe_netpositions(xml):
+    """
+    parses the xml coming out of the netposition endpoint of the excell utilitytool
+
+    :param xml: string or bytes of the xml data
+    :return:
+    """
+
+    if type(xml) == str:
+        xml_b = xml.encode('UTF-8')
+    elif type(xml) == bytes:
+        xml_b = xml
+    else:
+        raise ValueError("xml should be provided in either bytes or string format")
+
+    tree = etree.fromstring(xml_b)
+
+    data = {
+        'date': tree.xpath("ns:NetPositionData/ns:CalendarDate/node()", namespaces={'ns':'http://tempuri.org/'}),
+        'hour': tree.xpath("ns:NetPositionData/ns:CalendarHour/node()", namespaces={'ns':'http://tempuri.org/'}),
+    }
+    for zone in ['AT', 'NL', 'BE', 'DE', 'FR', 'ALBE', 'ALDE']:
+        data[zone] = tree.xpath(f"ns:NetPositionData/ns:{zone}/node()", namespaces={'ns':'http://tempuri.org/'})
+
+    df = pd.DataFrame.from_dict(data, orient='columns')
+    df = df[['date', 'hour', 'AT', 'NL', 'BE', 'DE', 'FR', 'ALBE', 'ALDE']]
+    df[['AT', 'NL', 'BE', 'DE', 'FR', 'ALBE', 'ALDE']] = \
+        df[['AT', 'NL', 'BE', 'DE', 'FR', 'ALBE', 'ALDE']].astype('float')
+    df = pd.DataFrame(df)
+
+    df['TIMESTAMP_CET'] = df.apply(
+        lambda row: datetime.strptime(row['date'], '%Y-%m-%dT00:00:00').replace(hour=int(row['hour']) - 1),
+        axis=1)
+    df.drop(columns=['date', 'hour'], inplace=True)
+
+    return df
+
 
 def _parse_maczt_final_flowbased_domain(df, zone='NL'):
     """

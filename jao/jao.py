@@ -8,12 +8,12 @@ from suds.client import Client as suds_Client
 from functools import wraps
 from PIL import Image
 from io import BytesIO, StringIO
-from .parsers import _parse_utility_tool_xml, _parse_maczt_final_flowbased_domain
+from .parsers import _parse_utility_tool_xml, _parse_maczt_final_flowbased_domain, _parse_utilitytool_cwe_netpositions
 import numpy as np
 
 
 __title__ = "jao-py"
-__version__ = "0.1.7"
+__version__ = "0.1.8"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -172,6 +172,23 @@ class JaoUtilityToolCSVClient:
             'user-agent': 'jao-py (github.com/fboerman/jao-py)'
         })
 
+    def query_cwe_net_position(self, d_from, d_to):
+        """
+        Downloads the internal cwe net positions between the given date range
+
+        :param d_from: datetime.date object
+        :param d_to: datetime.date object
+        :return:
+        """
+
+        url = f"https://utilitytool.jao.eu/WebServiceV2.asmx/GetNetPositionDataForAPeriod?" \
+              f"dateFrom={d_from.strftime('%m-%d-%Y')}&dateTo={d_to.strftime('%m-%d-%Y')}"
+        r = self.s.get(url)
+        r.raise_for_status()
+
+        return _parse_utilitytool_cwe_netpositions(r.text)
+
+
     def query_final_flowbased_domain(self, d):
         """
         Downloads the final flowbased of the business day of the given date object
@@ -184,6 +201,7 @@ class JaoUtilityToolCSVClient:
         url = f"https://utilitytool.jao.eu/CSV/GetAllCBCOFixedLabelDataForAPeriod?dateFrom={d.strftime('%m-%d-%Y')}&" \
               f"dateTo={d.strftime('%m-%d-%Y')}&random=1"
         r = self.s.get(url)
+        r.raise_for_status()
 
         lines = r.text.replace(';|', "|").split('\r\n')
         lines[0] = lines[0].replace(';', '|')
