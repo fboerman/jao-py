@@ -197,18 +197,20 @@ class JaoUtilityToolCSVClient:
 
         :param d: datetime.date object
         """
-
+        # retrieve the data from jao network call
         url = f"https://utilitytool.jao.eu/CSV/GetAllCBCOFixedLabelDataForAPeriod?dateFrom={d.strftime('%m-%d-%Y')}&" \
               f"dateTo={d.strftime('%m-%d-%Y')}&random=1"
         r = self.s.get(url)
+        # check for http errors
         r.raise_for_status()
 
+        # do some character formatting so pandas understands the text
         lines = r.text.replace(';|', "|").split('\r\n')
         lines[0] = lines[0].replace(';', '|')
 
         lines = r.text.replace(';|', "|").split('\r\n')
         lines[0] = lines[0].replace(';', '|')
-
+        # load it in a virtual file and give it to pandas
         stream = StringIO()
         stream.write("\n".join(lines))
         stream.seek(0)
@@ -253,6 +255,28 @@ class JaoUtilityToolCSVClient:
         df = df.rename(columns={'DeliveryDate': 'timestamp'}).drop(columns=['Period']).set_index('timestamp')
         df = df.tz_localize('Europe/Amsterdam', ambiguous=True)
 
+        # now do some cleanup, remove useless columns and make the ptdf columns more efficient
+        df.drop(columns=['FileId', 'Row'], inplace=True)
+        # for ptdf columns we assume the jao system that the same bidding zone is mentioned in whole column
+        # so only check first entry
+        ptdf_translation = {}
+        useless_columns = []
+        i = 0
+        while True:
+            if i == 0:
+                c1 = "Factor"
+                c2 = "BiddingArea_Shortname"
+            else:
+                c1 = f"Factor.{i}"
+                c2 = f"BiddingArea_Shortname.{i}"
+            if c1 in df.columns and c2 in df.columns:
+                ptdf_translation[c1] = f"PTDF_{df[c2].iloc[0]}"
+                useless_columns.append(c2)
+            else:
+                break
+            i += 1
+        df.rename(columns=ptdf_translation, inplace=True)
+        df.drop(columns=useless_columns, inplace=True)
         return df
 
     def query_maczt(self, d, zone='NL'):
