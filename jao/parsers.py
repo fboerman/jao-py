@@ -161,3 +161,30 @@ def _parse_maczt_final_flowbased_domain(df: pd.DataFrame, zone='NL') -> pd.DataF
     df[['MCCC_PCT', 'MACZT_PCT', 'LF_SUB_PCT', 'MACZT_MIN_PCT', 'MACZT_MARGIN']] = df[['MCCC_PCT', 'MACZT_PCT', 'LF_SUB_PCT', 'MACZT_MIN_PCT', 'MACZT_MARGIN']].round(2)
 
     return df
+
+
+def _parse_suds_tradingdata(data, subject: str, nested: bool = False) -> pd.DataFrame:
+    """
+
+    :param data: suds.sudsobject.TradingData object
+    :param subject: string of the type that needs to be parsed
+    :return: resulting pandas dataframe
+    """
+    data_parsed = []
+    if nested:
+        data_raw = data[subject][subject.strip('s')]
+    else:
+        data_raw = data[subject]
+    for obj in data_raw:
+        obj = dict(obj)
+        if 'Date' in obj:
+            obj['timestamp'] = obj['Date'].replace(hour=obj['CalendarHour'] - 1)
+            del obj['Date']
+        else:
+            obj['timestamp'] = obj['CalendarDate'].replace(hour=obj['CalendarHour'] - 1)
+            del obj['CalendarDate']
+
+        del obj['CalendarHour']
+        data_parsed.append(obj)
+
+    return pd.DataFrame(data_parsed).set_index('timestamp').tz_localize('Europe/Amsterdam')

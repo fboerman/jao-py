@@ -8,7 +8,8 @@ from suds.client import Client as suds_Client
 from functools import wraps
 from PIL import Image
 from io import BytesIO, StringIO
-from .parsers import _parse_utility_tool_xml, _parse_maczt_final_flowbased_domain, _parse_utilitytool_cwe_netpositions
+from .parsers import _parse_utility_tool_xml, _parse_maczt_final_flowbased_domain, \
+    _parse_utilitytool_cwe_netpositions, _parse_suds_tradingdata
 import numpy as np
 from typing import Union
 from .definitions import ParseDataSubject
@@ -161,6 +162,47 @@ class JaoUtilityToolASMXClient:
         :return:
         """
         print(str(self.client))
+
+    def query_minmax_NP(self, d_from: str, d_to: str) -> pd.DataFrame:
+        """
+
+        :param d_from: start date string that is accepted by pandas timestamp
+        :param d_to: end date string that is accepted by pandas timestamp
+        """
+        d_from = pd.Timestamp(d_from).strftime("%Y-%m-%d")
+        d_to = pd.Timestamp(d_to).strftime("%Y-%m-%d")
+        return _parse_suds_tradingdata(
+            self.client.service.GetTradingDataForAPeriod(d_from, d_to, False, True, False),
+            'MaxNetPositions',
+            True
+        )
+
+    def query_max_bex(self, d_from: str, d_to: str) -> pd.DataFrame:
+        """
+
+        :param d_from: start date string that is accepted by pandas timestamp
+        :param d_to: end date string that is accepted by pandas timestamp
+        """
+        d_from = pd.Timestamp(d_from).strftime("%Y-%m-%d")
+        d_to = pd.Timestamp(d_to).strftime("%Y-%m-%d")
+        return _parse_suds_tradingdata(
+            self.client.service.GetTradingDataForAPeriod(d_from, d_to, True, False, False),
+            'MaxExchanges',
+            True
+        )
+
+    def query_CWE_NP(self, d_from: str, d_to: str) -> pd.DataFrame:
+        """
+
+        :param d_from: start date string that is accepted by pandas timestamp
+        :param d_to: end date string that is accepted by pandas timestamp
+        """
+        d_from = pd.Timestamp(d_from).strftime("%Y-%m-%d")
+        d_to = pd.Timestamp(d_to).strftime("%Y-%m-%d")
+        return _parse_suds_tradingdata(
+            self.client.service.GetNetPositionDataForAPeriod(d_from, d_to),
+            'NetPositionData'
+        )
 
 
 class JaoUtilityToolCSVClient:
