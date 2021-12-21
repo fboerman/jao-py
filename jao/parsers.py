@@ -1,6 +1,8 @@
 import pandas as pd
 from lxml import etree
 from datetime import datetime
+from .definitions import ParseDataSubject
+from typing import Union
 
 
 def _infer_and_convert_type(s):
@@ -31,7 +33,7 @@ def _infer_and_convert_type(s):
     return s.fillna('')
 
 
-def _parse_utility_tool_xml(xml, t):
+def _parse_utility_tool_xml(xml: Union[bytes, str], t: ParseDataSubject) -> pd.DataFrame:
     """
     parses the xml coming out of the utility tool
 
@@ -48,7 +50,7 @@ def _parse_utility_tool_xml(xml, t):
 
     tree = etree.fromstring(xml_b)
     # the node name is the singular of the type
-    node_name = t.strip('s')
+    node_name = t.value.strip('s')
     # get all the column names by checking all the children tags of a node
     column_names = [x.tag for x in tree.xpath(t + '/' + node_name)[0].getchildren()]
 
@@ -69,7 +71,8 @@ def _parse_utility_tool_xml(xml, t):
 
     return df
 
-def _parse_utilitytool_cwe_netpositions(xml):
+
+def _parse_utilitytool_cwe_netpositions(xml: Union[bytes, str]) -> pd.DataFrame:
     """
     parses the xml coming out of the netposition endpoint of the excell utilitytool
 
@@ -107,7 +110,7 @@ def _parse_utilitytool_cwe_netpositions(xml):
     return df
 
 
-def _parse_maczt_final_flowbased_domain(df, zone='NL'):
+def _parse_maczt_final_flowbased_domain(df: pd.DataFrame, zone='NL') -> pd.DataFrame:
     """
     extracts the MACZT numbers from the final flowbased domain dataframe
     for now only NL zone is supported

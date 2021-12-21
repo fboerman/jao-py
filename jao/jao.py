@@ -10,10 +10,12 @@ from PIL import Image
 from io import BytesIO, StringIO
 from .parsers import _parse_utility_tool_xml, _parse_maczt_final_flowbased_domain, _parse_utilitytool_cwe_netpositions
 import numpy as np
+from typing import Union
+from .definitions import ParseDataSubject
 
 
 __title__ = "jao-py"
-__version__ = "0.1.9"
+__version__ = "0.2.0"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -42,7 +44,7 @@ class JaoAPIClient:
             raise ServerReturnsInvalidStatusCode
         return [x['value'] for x in r.json()]
 
-    def query_auction_details_by_month(self, corridor, month):
+    def query_auction_details_by_month(self, corridor: str, month: date) -> dict:
         """
         get the auction data for a specified month. gives basically everything but the bids themselves
 
@@ -73,7 +75,7 @@ class JaoAPIClient:
 
         return data
 
-    def query_auction_bids_by_month(self, corridor, month, as_dict=False):
+    def query_auction_bids_by_month(self, corridor: str, month: date, as_dict: bool = False) -> Union[pd.DataFrame, dict]:
         """
         wrapper function to construct the auction id since its predictable and
           pass it on to the query function for the bids
@@ -86,7 +88,7 @@ class JaoAPIClient:
 
         return self.query_auction_bids_by_id(month.strftime(f"{corridor}-M-BASE-------%y%m01-01"), as_dict=as_dict)
 
-    def query_auction_bids_by_id(self, auction_id, as_dict=False):
+    def query_auction_bids_by_id(self, auction_id: str, as_dict: bool = False) -> Union[pd.DataFrame, dict]:
         r = self.s.post(self.BASEURL + "/auction/calls/getbids", json={
             "auctionid": auction_id
         })
@@ -99,8 +101,7 @@ class JaoAPIClient:
         else:
             return pd.DataFrame(r.json())
 
-
-    def query_auction_stats_months(self, month_from, month_to, corridor):
+    def query_auction_stats_months(self, month_from: date, month_to: date, corridor: str) -> pd.DataFrame:
         """
         gets the following statistics for the give range of months (included both ends) in a dataframe:
         id
@@ -147,8 +148,7 @@ class JaoAPIClient:
 class JaoUtilityToolASMXClient:
     # from the ASMX Web Service API, this is a very good defined system
     #   which supplies the endpoint and formats in xml upfront. this is delegate to the suds package
-    #   so this is only a very simple wrapper
-    # TODO: some known methods are wrapped so that they return a proper dataframe
+    #   for convenience some methods are wrapped into a dataframe
 
     def __init__(self):
         # all communication goes through the sud package, since the schemas are defined in the WSDL
@@ -172,15 +172,16 @@ class JaoUtilityToolCSVClient:
             'user-agent': 'jao-py (github.com/fboerman/jao-py)'
         })
 
-    def query_cwe_net_position(self, d_from, d_to):
+    def query_cwe_net_position(self, d_from: str, d_to: str) -> pd.DataFrame:
         """
         Downloads the internal cwe net positions between the given date range
 
-        :param d_from: datetime.date object
-        :param d_to: datetime.date object
+        :param d_from: start date string that is accepted by pandas timestamp
+        :param d_to: end date string that is accepted by pandas timestamp
         :return:
         """
-
+        d_from = pd.Timestamp(d_from)
+        d_to = pd.Timestamp(d_to)
         url = f"https://utilitytool.jao.eu/WebServiceV2.asmx/GetNetPositionDataForAPeriod?" \
               f"dateFrom={d_from.strftime('%m-%d-%Y')}&dateTo={d_to.strftime('%m-%d-%Y')}"
         r = self.s.get(url)
@@ -188,15 +189,16 @@ class JaoUtilityToolCSVClient:
 
         return _parse_utilitytool_cwe_netpositions(r.text)
 
-
-    def query_final_flowbased_domain(self, d):
+    def query_final_flowbased_domain(self, d: str) -> pd.DataFrame:
         """
         Downloads the final flowbased of the business day of the given date object
         returns a dataframe with the data. This endpoint is relatively slow so we download one day per request
         for multiple days call this function repeatedly and pd.concat the dataframes
 
-        :param d: datetime.date object
+        :param d: date string that is accepted by pandas timestamp
         """
+        d = pd.Timestamp(d)
+
         # retrieve the data from jao network call
         url = f"https://utilitytool.jao.eu/CSV/GetAllCBCOFixedLabelDataForAPeriod?dateFrom={d.strftime('%m-%d-%Y')}&" \
               f"dateTo={d.strftime('%m-%d-%Y')}&random=1"
@@ -279,14 +281,14 @@ class JaoUtilityToolCSVClient:
         df.drop(columns=useless_columns, inplace=True)
         return df
 
-    def query_maczt(self, d, zone='NL'):
+    def query_maczt(self, d: str, zone: str = 'NL') -> pd.DataFrame:
         """
         Extract the MACZT numbers from the final flowbased domain.
         Calls the query_final_flowbased_domain function and has thus the same limitation about
                 being relatively slow and only one day per call
         For now only the NL zone is supported
 
-        :param d: datetime.date object
+        :param d: date string that is accepted by pandas timestamp
         :param zone: str of the selected zone
         :return:
         """
@@ -350,14 +352,18 @@ class JaoUtilityToolXmlClient:
         self.captcha = None
 
     @captcha
-    def query_xml(self, date_from, date_to):
+    def query_xml(self, date_from: str, date_to: str) -> bytes:
         """
         download the utility tool xml file with given dates, returns the raw xml in bytes
 
-        :param date_from:
-        :param date_to:
+        :param date_from: start date string that is accepted by pandas timestamp
+        :param date_to: end date string that is accepted by pandas timestamp
         :return:
         """
+
+        date_from = pd.Timestamp(date_from)
+        date_to = pd.Timestamp(date_to)
+
         r = self.s.post(self.BASEURL + '/Util/Download', data={
             'Date': date.today().strftime("%Y/%m/%d"),
             'fileType': 'Xml',
@@ -373,13 +379,13 @@ class JaoUtilityToolXmlClient:
 
         return r.content
 
-    def query_df(self, date_from, date_to, t):
+    def query_df(self, date_from: str, date_to: str, t: ParseDataSubject) -> pd.DataFrame:
         """
         downloads the utility tool xml file and parses the selected data type from the response into a dataframe
 
-        :param date_from:
-        :param date_to:
-        :param t: which type to parse, choose from "MaxExchanges", "MaxNetPositions", "Ptdfs"
+        :param date_from: start date string that is accepted by pandas timestamp
+        :param date_to: end date string that is accepted by pandas timestamp
+        :param t: which type to parse, choose from ParseDataSubject Enum
         :return:
         """
 
