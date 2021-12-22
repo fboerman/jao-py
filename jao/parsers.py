@@ -184,4 +184,4 @@ def _parse_suds_tradingdata(data, subject: str, nested: bool = False, freq: str 
                              df[date_column].max().replace(hour=23),
                              freq=freq, tz='Europe/Amsterdam')
     df.drop(columns=[date_column, 'CalendarHour'], inplace=True)
-    return df
+    return df.astype(float)
