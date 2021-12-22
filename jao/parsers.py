@@ -163,11 +163,12 @@ def _parse_maczt_final_flowbased_domain(df: pd.DataFrame, zone='NL') -> pd.DataF
     return df
 
 
-def _parse_suds_tradingdata(data, subject: str, nested: bool = False) -> pd.DataFrame:
+def _parse_suds_tradingdata(data, subject: str, nested: bool = False, freq: str = 'H') -> pd.DataFrame:
     """
 
     :param data: suds.sudsobject.TradingData object
     :param subject: string of the type that needs to be parsed
+    :param freq: timefrequency for
     :return: resulting pandas dataframe
     """
     data_parsed = []
@@ -175,16 +176,12 @@ def _parse_suds_tradingdata(data, subject: str, nested: bool = False) -> pd.Data
         data_raw = data[subject][subject.strip('s')]
     else:
         data_raw = data[subject]
-    for obj in data_raw:
-        obj = dict(obj)
-        if 'Date' in obj:
-            obj['timestamp'] = obj['Date'].replace(hour=obj['CalendarHour'] - 1)
-            del obj['Date']
-        else:
-            obj['timestamp'] = obj['CalendarDate'].replace(hour=obj['CalendarHour'] - 1)
-            del obj['CalendarDate']
 
-        del obj['CalendarHour']
-        data_parsed.append(obj)
+    date_column = 'Date' if 'Date' in data_raw[0] else 'CalendarDate'
 
-    return pd.DataFrame(data_parsed).set_index('timestamp').tz_localize('Europe/Amsterdam')
+    df = pd.DataFrame([dict(x) for x in data_raw])
+    df.index = pd.date_range(df[date_column].min(),
+                             df[date_column].max().replace(hour=23),
+                             freq=freq, tz='Europe/Amsterdam')
+    df.drop(columns=[date_column, 'CalendarHour'], inplace=True)
+    return df
