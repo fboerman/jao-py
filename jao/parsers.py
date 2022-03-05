@@ -122,8 +122,8 @@ def _parse_maczt_final_flowbased_domain(df: pd.DataFrame, zone='NL') -> pd.DataF
         raise NotImplementedError
 
     # select only relevant columns
-    df = df[['OutageName', 'OutageEIC', 'CriticalBranchName', 'CriticalBranchEIC',
-             'Presolved', 'RemainingAvailableMargin', 'Fmax', 'Fref', 'AMR', 'MinRAMFactor', 'MinRAMFactorJustification']]
+    df = df[['CO', 'CO_EIC', 'CNE', 'CNE_EIC',
+             'Presolved', 'RAM', 'Fmax', 'Fref', 'AMR', 'MinRAMFactor', 'MinRAMFactorJustification']]
 
     # if there is a default parameter day there is an empty dataframe. stop further processing
     if len(df) == 0:
@@ -133,10 +133,10 @@ def _parse_maczt_final_flowbased_domain(df: pd.DataFrame, zone='NL') -> pd.DataF
     # filter on cnecs that have a valid dutch justification string and are not lta
     # make sure to make copy to prevent slice errors later
     df = df[df['MinRAMFactorJustification'].str.contains('MACZTtarget').fillna(False)]
-    df = df[~(df['CriticalBranchName'].str.contains('LTA_corner'))]
+    df = df[~(df['CNE'].str.contains('LTA_corner'))]
     df = pd.DataFrame(df)
 
-    df['MCCC_PCT'] = 100 * df['RemainingAvailableMargin'] / df['Fmax']
+    df['MCCC_PCT'] = 100 * df['RAM'] / df['Fmax']
 
     df[['MNCC_PCT', 'LF_CALC_PCT', 'LF_ACCEPT_PCT', 'MACZT_TARGET_PCT']] = \
         df['MinRAMFactorJustification'].str.extract(
@@ -150,12 +150,6 @@ def _parse_maczt_final_flowbased_domain(df: pd.DataFrame, zone='NL') -> pd.DataF
     df['MACZT_MARGIN'] = df['MACZT_PCT'] - df['MACZT_MIN_PCT']
 
     df.drop(columns=['MinRAMFactorJustification'], inplace=True)
-    df.rename(columns={
-        'OutageName': 'CO',
-        'OutageEIC': 'CO_EIC',
-        'CriticalBranchName': 'CNE',
-        'CriticalBranchEIC': 'CNE_EIC'
-    })
 
     # there is only two decimals statistical relevance here so round it at that
     df[['MCCC_PCT', 'MACZT_PCT', 'LF_SUB_PCT', 'MACZT_MIN_PCT', 'MACZT_MARGIN']] = df[['MCCC_PCT', 'MACZT_PCT', 'LF_SUB_PCT', 'MACZT_MIN_PCT', 'MACZT_MARGIN']].round(2)

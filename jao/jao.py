@@ -16,7 +16,7 @@ from .definitions import ParseDataSubject
 
 
 __title__ = "jao-py"
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -319,8 +319,15 @@ class JaoUtilityToolCSVClient:
             else:
                 break
             i += 1
-        df.rename(columns=ptdf_translation, inplace=True)
-        df.drop(columns=useless_columns, inplace=True)
+        df = df.rename(columns=ptdf_translation)
+        df = df.drop(columns=useless_columns)
+        df = df.rename(columns={
+                'OutageName': 'CO',
+                'OutageEIC': 'CO_EIC',
+                'CriticalBranchName': 'CNE',
+                'CriticalBranchEIC': 'CNE_EIC',
+                'RemainingAvailableMargin': 'RAM'
+            })
         return df
 
     def query_maczt(self, d: str, zone: str = 'NL') -> pd.DataFrame:
