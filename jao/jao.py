@@ -328,6 +328,42 @@ class JaoUtilityToolCSVClient:
 
         return self._parse_domain(r)
 
+    def query_initial_virgin_domain(self, d: str) -> pd.DataFrame:
+        """
+        Works the same as query_final_flowbased_domain but for the virgin domain initial computation
+
+        :param d: date string that is accepted by pandas timestamp
+        """
+        d = pd.Timestamp(d)
+
+        # retrieve the data from jao network call
+        url = f"https://utilitytool.jao.eu/CSV/GetVirginDomainInitialComputationDataForAPeriod?"\
+              f"dateFrom={d.strftime('%m-%d-%Y')}&" \
+              f"dateTo={d.strftime('%m-%d-%Y')}&random=1"
+        r = self.s.get(url)
+        # check for http errors
+        r.raise_for_status()
+
+        return self._parse_domain(r)
+
+    def query_final_virgin_domain(self, d: str) -> pd.DataFrame:
+        """
+        Works the same as query_final_flowbased_domain but for the virgin domain final computation
+
+        :param d: date string that is accepted by pandas timestamp
+        """
+        d = pd.Timestamp(d)
+
+        # retrieve the data from jao network call
+        url = f"https://utilitytool.jao.eu/CSV/GetVirginDomainFinalComputationDataForAPeriod?"\
+              f"dateFrom={d.strftime('%m-%d-%Y')}&" \
+              f"dateTo={d.strftime('%m-%d-%Y')}&random=1"
+        r = self.s.get(url)
+        # check for http errors
+        r.raise_for_status()
+
+        return self._parse_domain(r)
+
     def query_maczt(self, d: str, zone: str = 'NL') -> pd.DataFrame:
         """
         Extract the MACZT numbers from the final flowbased domain.
