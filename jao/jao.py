@@ -1,6 +1,6 @@
 import requests
 import pandas as pd
-from .exceptions import *
+from .exceptions import ServerReturnedEmptyData, InvalidCaptcha
 from datetime import timedelta, date
 from calendar import monthrange
 from dateutil.relativedelta import relativedelta
@@ -16,7 +16,7 @@ from .definitions import ParseDataSubject
 
 
 __title__ = "jao-py"
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -35,14 +35,12 @@ class JaoAPIClient:
 
     def query_auction_corridors(self):
         r = self.s.post(self.BASEURL + '/auction/calls/getcorridors', json={})
-        if r.status_code != 200:
-            raise ServerReturnsInvalidStatusCode
+        r.raise_for_status()
         return [x['value'] for x in r.json()]
 
     def query_auction_horizons(self):
         r = self.s.post(self.BASEURL + '/auction/calls/gethorizons', json={})
-        if r.status_code != 200:
-            raise ServerReturnsInvalidStatusCode
+        r.raise_for_status()
         return [x['value'] for x in r.json()]
 
     def query_auction_details_by_month(self, corridor: str, month: date) -> dict:
@@ -64,8 +62,7 @@ class JaoAPIClient:
             'horizon': 'Monthly',
             "todate": month_end.strftime("%Y-%m-%d")})
 
-        if r.status_code != 200:
-            raise ServerReturnsInvalidStatusCode
+        r.raise_for_status()
 
         data = r.json()
         # pretify the results since we know it is for monthly auction
@@ -94,8 +91,7 @@ class JaoAPIClient:
             "auctionid": auction_id
         })
 
-        if r.status_code != 200:
-            raise ServerReturnsInvalidStatusCode
+        r.raise_for_status()
 
         if as_dict:
             return r.json()
@@ -231,27 +227,8 @@ class JaoUtilityToolCSVClient:
 
         return _parse_utilitytool_cwe_netpositions(r.text)
 
-    def query_final_flowbased_domain(self, d: str) -> pd.DataFrame:
-        """
-        Downloads the final flowbased of the business day of the given date object
-        returns a dataframe with the data. This endpoint is relatively slow so we download one day per request
-        for multiple days call this function repeatedly and pd.concat the dataframes
-
-        :param d: date string that is accepted by pandas timestamp
-        """
-        d = pd.Timestamp(d)
-
-        # retrieve the data from jao network call
-        url = f"https://utilitytool.jao.eu/CSV/GetAllCBCOFixedLabelDataForAPeriod?dateFrom={d.strftime('%m-%d-%Y')}&" \
-              f"dateTo={d.strftime('%m-%d-%Y')}&random=1"
-        r = self.s.get(url)
-        # check for http errors
-        r.raise_for_status()
-
+    def _parse_domain(self, r: requests.Response) -> pd.DataFrame:
         # do some character formatting so pandas understands the text
-        lines = r.text.replace(';|', "|").split('\r\n')
-        lines[0] = lines[0].replace(';', '|')
-
         lines = r.text.replace(';|', "|").split('\r\n')
         lines[0] = lines[0].replace(';', '|')
         # load it in a virtual file and give it to pandas
@@ -261,9 +238,10 @@ class JaoUtilityToolCSVClient:
 
         df = pd.read_csv(stream, sep="|")
 
-        # check if the dataframe is empty this means there were default flow parameters. then stop further processing
+        # check if the dataframe is empty, this should not happen. default flow parameters always return something.
+        # throw an error and let the user deal with it
         if len(df) == 0:
-            return df
+            raise ServerReturnedEmptyData
 
         # parse the date string which is only the day
         df['DeliveryDate'] = pd.to_datetime(df['DeliveryDate'], format='%d/%m/%Y %H:%M:%S')
@@ -295,7 +273,7 @@ class JaoUtilityToolCSVClient:
         else:
             # normal time
             df['DeliveryDate'] = df.apply(lambda row: row['DeliveryDate'].replace(hour=row['Period'] - 1), axis=1)
-        df.dropna(subset=['DeliveryDate'], inplace=True)
+        df = df.dropna(subset=['DeliveryDate'])
         df = df.rename(columns={'DeliveryDate': 'timestamp'}).drop(columns=['Period']).set_index('timestamp')
         df = df.tz_localize('Europe/Amsterdam', ambiguous=True)
 
@@ -328,7 +306,27 @@ class JaoUtilityToolCSVClient:
                 'CriticalBranchEIC': 'CNE_EIC',
                 'RemainingAvailableMargin': 'RAM'
             })
+
         return df
+
+    def query_final_flowbased_domain(self, d: str) -> pd.DataFrame:
+        """
+        Downloads the final flowbased of the business day of the given date object
+        returns a dataframe with the data. This endpoint is relatively slow so we download one day per request
+        for multiple days call this function repeatedly and pd.concat the dataframes
+
+        :param d: date string that is accepted by pandas timestamp
+        """
+        d = pd.Timestamp(d)
+
+        # retrieve the data from jao network call
+        url = f"https://utilitytool.jao.eu/CSV/GetAllCBCOFixedLabelDataForAPeriod?dateFrom={d.strftime('%m-%d-%Y')}&" \
+              f"dateTo={d.strftime('%m-%d-%Y')}&random=1"
+        r = self.s.get(url)
+        # check for http errors
+        r.raise_for_status()
+
+        return self._parse_domain(r)
 
     def query_maczt(self, d: str, zone: str = 'NL') -> pd.DataFrame:
         """
@@ -366,8 +364,7 @@ def captcha(func):
         #  later add checks if it has expired (does it even expire?)
         if self.captcha is None:
             r = self.s.get(self.BASEURL + "/Captcha/Show")
-            if r.status_code != 200:
-                raise ServerReturnsInvalidStatusCode
+            r.raise_for_status()
             png_stream = BytesIO(r.content)
             png_stream.seek(0)
             captcha_png = Image.open(png_stream)
@@ -423,8 +420,7 @@ class JaoUtilityToolXmlClient:
             'force': 'false',
         })
 
-        if r.status_code != 200:
-            raise ServerReturnsInvalidStatusCode
+        r.raise_for_status()
 
         return r.content
 

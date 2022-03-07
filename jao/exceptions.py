@@ -1,5 +1,6 @@
-class ServerReturnsInvalidStatusCode(Exception):
+class InvalidCaptcha(Exception):
     pass
 
-class InvalidCaptcha(Exception):
+
+class ServerReturnedEmptyData(Exception):
     pass
