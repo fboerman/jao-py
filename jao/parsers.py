@@ -72,9 +72,10 @@ def _parse_utility_tool_xml(xml: Union[bytes, str], t: ParseDataSubject) -> pd.D
     return df
 
 
-def _parse_utilitytool_cwe_netpositions(xml: Union[bytes, str]) -> pd.DataFrame:
+def _parse_utilitytool_xml(xml: Union[bytes, str], nodename: str, columnnames: list, datenode: str,
+                           xpath: str='') -> pd.DataFrame:
     """
-    parses the xml coming out of the netposition endpoint of the excell utilitytool
+    parses the xml coming out excell utilitytool endpoints which is xml
 
     :param xml: string or bytes of the xml data
     :return:
@@ -90,22 +91,23 @@ def _parse_utilitytool_cwe_netpositions(xml: Union[bytes, str]) -> pd.DataFrame:
     tree = etree.fromstring(xml_b)
 
     data = {
-        'date': tree.xpath("ns:NetPositionData/ns:CalendarDate/node()", namespaces={'ns':'http://tempuri.org/'}),
-        'hour': tree.xpath("ns:NetPositionData/ns:CalendarHour/node()", namespaces={'ns':'http://tempuri.org/'}),
+        'date': tree.xpath(xpath + f"ns:{nodename}/ns:{datenode}/node()", namespaces={'ns': 'http://tempuri.org/'}),
+        'hour': tree.xpath(xpath + f"ns:{nodename}/ns:CalendarHour/node()", namespaces={'ns': 'http://tempuri.org/'}),
     }
-    for zone in ['AT', 'NL', 'BE', 'DE', 'FR', 'ALBE', 'ALDE']:
-        data[zone] = tree.xpath(f"ns:NetPositionData/ns:{zone}/node()", namespaces={'ns':'http://tempuri.org/'})
+    for c in columnnames:
+        data[c] = tree.xpath(xpath + f"ns:{nodename}/ns:{c}/node()", namespaces={'ns': 'http://tempuri.org/'})
 
     df = pd.DataFrame.from_dict(data, orient='columns')
-    df = df[['date', 'hour', 'AT', 'NL', 'BE', 'DE', 'FR', 'ALBE', 'ALDE']]
-    df[['AT', 'NL', 'BE', 'DE', 'FR', 'ALBE', 'ALDE']] = \
-        df[['AT', 'NL', 'BE', 'DE', 'FR', 'ALBE', 'ALDE']].astype('float')
+    df = df[['date', 'hour'] + columnnames]
+    df[columnnames] = df[columnnames].astype('float')
     df = pd.DataFrame(df)
 
-    df['TIMESTAMP_CET'] = df.apply(
+    # TODO: this fails with DST, change to index pd.date_range instead per day
+    df['timestamp'] = df.apply(
         lambda row: datetime.strptime(row['date'], '%Y-%m-%dT00:00:00').replace(hour=int(row['hour']) - 1),
         axis=1)
     df.drop(columns=['date', 'hour'], inplace=True)
+    df = df.set_index('timestamp').tz_localize('europe/amsterdam')
 
     return df
 

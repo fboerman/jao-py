@@ -9,14 +9,14 @@ from functools import wraps
 from PIL import Image
 from io import BytesIO, StringIO
 from .parsers import _parse_utility_tool_xml, _parse_maczt_final_flowbased_domain, \
-    _parse_utilitytool_cwe_netpositions, _parse_suds_tradingdata
+    _parse_utilitytool_xml, _parse_suds_tradingdata
 import numpy as np
 from typing import Union
 from .definitions import ParseDataSubject
 
 
 __title__ = "jao-py"
-__version__ = "0.2.3"
+__version__ = "0.2.4"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -225,7 +225,20 @@ class JaoUtilityToolCSVClient:
         r = self.s.get(url)
         r.raise_for_status()
 
-        return _parse_utilitytool_cwe_netpositions(r.text)
+        return _parse_utilitytool_xml(r.text, 'NetPositionData', ['AT', 'NL', 'BE', 'DE', 'FR', 'ALBE', 'ALDE'], 'CalendarDate')
+
+    def query_cwe_minmax_NP(self, d_from: str, d_to: str) -> pd.DataFrame:
+        d_from = pd.Timestamp(d_from)
+        d_to = pd.Timestamp(d_to)
+        url = f"https://utilitytool.jao.eu/WebServiceV2.asmx/GetTradingDataForAPeriod?" \
+              f"dateFrom={d_from.strftime('%m-%d-%Y')}&dateTo={d_to.strftime('%m-%d-%Y')}" \
+              f"&maxExchange=false&netPosition=true&ptdf=false"
+        r = self.s.get(url)
+        r.raise_for_status()
+
+        return _parse_utilitytool_xml(r.text, 'MaxNetPosition',
+                                      ['MinAT', 'MaxAT', 'MinNL', 'MaxNL', 'MinBE', 'MaxBE', 'MinDE', 'MaxDE', 'MinFR',
+                                       'MaxFR', 'MinALBE', 'MaxALBE', 'MinALDE', 'MaxALDE'], 'Date', xpath='ns:MaxNetPositions/')
 
     def _parse_domain(self, r: requests.Response) -> pd.DataFrame:
         # do some character formatting so pandas understands the text
