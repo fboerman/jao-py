@@ -1,8 +1,9 @@
 import requests
 import pandas as pd
-from .util import to_snake_case
 import json
-from time import time
+from multiprocessing import Pool
+import itertools
+from .parsers import parse_final_domain
 
 __title__ = "jao-py"
 __version__ = "0.3.0"
@@ -24,7 +25,16 @@ class JaoPublicationToolClient:
                 'Authorization': 'Bearer ' + api_key
             })
 
-    def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None, co: str = None):
+    def _starmap_pull(self, url, params, keyname=None):
+        r = self.s.get(url, params=params)
+        r.raise_for_status()
+        if keyname is not None:
+            return r.json()[keyname]
+        else:
+            return r.json()
+
+    def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None, co: str = None,
+                           urls_only: bool = False) -> list:
         if type(mtu) != pd.Timestamp:
             raise Exception('Please use a timezoned pandas Timestamp object for mtu')
         if mtu.tzinfo is None:
@@ -50,20 +60,29 @@ class JaoPublicationToolClient:
         # now do new call with all data requested
         # jao servers are not great returning it all at once, but they let you choose your own pagination
         # lets go for chunks of 5000, arbitrarily chosen
-        # TODO: parallelise this
+
         total_num_data = r.json()['totalRowsWithFilter']
-        print(total_num_data)
-        data = []
+        args = []
         for i in range(0, total_num_data, 5000):
-            print(i)
-            start_time = time()
-            r = self.s.get(self.BASEURL + "finalComputation/index", params={
+            args.append((self.BASEURL + "finalComputation/index", {
                 'date': mtu.isoformat(),
                 'search': json.dumps(filter),
                 'skip': i,
                 'take': 5000
-            })
-            r.raise_for_status()
-            data += r.json()['data']
-            print(f'took {round(time() - start_time, 2)} seconds')
-        return data
+            }, 'data'))
+
+        if urls_only:
+            return args
+
+        with Pool() as pool:
+            results = pool.starmap(self._starmap_pull, args)
+
+        return list(itertools.chain(*results))
+
+
+class JaoPublicationToolPandasClient(JaoPublicationToolClient):
+    def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None, co: str = None) -> pd.DataFrame:
+        return parse_final_domain(
+            super().query_final_domain(mtu=mtu, presolved=presolved, cne=cne, co=co)
+        )
+
