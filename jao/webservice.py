@@ -7,24 +7,24 @@ from typing import Union
 
 
 class JaoAPIClient:
-    # this pulls from the same api as the frontend pulls from
-    # requires no further api key
+    # https://www.jao.eu/page-api/market-data
 
-    BASEURL = "https://www.jao.eu/api/v1"
+    BASEURL = "https://api.jao.eu/OWSMP/"
 
-    def __init__(self):
+    def __init__(self, api_key):
         self.s = requests.Session()
         self.s.headers.update({
-            'user-agent': 'jao-py (github.com/fboerman/jao-py)'
+            'user-agent': 'jao-py (github.com/fboerman/jao-py)',
+            'AUTH_API_KEY': api_key
         })
 
     def query_auction_corridors(self):
-        r = self.s.post(self.BASEURL + '/auction/calls/getcorridors', json={})
+        r = self.s.get(self.BASEURL + 'getcorridors')
         r.raise_for_status()
         return [x['value'] for x in r.json()]
 
     def query_auction_horizons(self):
-        r = self.s.post(self.BASEURL + '/auction/calls/gethorizons', json={})
+        r = self.s.get(self.BASEURL + 'gethorizons')
         r.raise_for_status()
         return [x['value'] for x in r.json()]
 
@@ -41,7 +41,7 @@ class JaoAPIClient:
 
         month_begin = month.replace(day=1)
         month_end = month.replace(day=monthrange(month.year, month.month)[1])
-        r = self.s.post(self.BASEURL + '/auction/calls/getauctions', json={
+        r = self.s.get(self.BASEURL + 'getauctions', params={
             'corridor': corridor,
             'fromdate': (month_begin - timedelta(days=1)).strftime("%Y-%m-%d"),
             'horizon': 'Monthly',
@@ -72,7 +72,7 @@ class JaoAPIClient:
         return self.query_auction_bids_by_id(month.strftime(f"{corridor}-M-BASE-------%y%m01-01"), as_dict=as_dict)
 
     def query_auction_bids_by_id(self, auction_id: str, as_dict: bool = False) -> Union[pd.DataFrame, dict]:
-        r = self.s.post(self.BASEURL + "/auction/calls/getbids", json={
+        r = self.s.get(self.BASEURL + "getbids", params={
             "auctionid": auction_id
         })
 
