@@ -1,0 +1,3 @@
+suds-community
+lxml
+pillow
