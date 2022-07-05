@@ -32,3 +32,11 @@ def parse_final_domain(data):
     df = df.rename(columns={'date_time_utc': 'mtu'})
     # return the result!
     return df
+
+
+def parse_net_positions(data):
+    df = pd.DataFrame(data).drop(columns='id')
+    df['dateTimeUtc'] = pd.to_datetime(df['dateTimeUtc'], utc=True).dt.tz_convert('europe/amsterdam')
+    df.index.name = 'timestamp'
+    df = df.rename(columns=lambda x: x.replace('hub_', '')).rename(columns={'DE': 'DE_LU'})
+    return df

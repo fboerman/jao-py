@@ -3,10 +3,10 @@ import pandas as pd
 import json
 from multiprocessing import Pool
 import itertools
-from .parsers import parse_final_domain
+from .parsers import parse_final_domain, parse_net_positions
 
 __title__ = "jao-py"
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -79,6 +79,13 @@ class JaoPublicationToolClient:
 
         return list(itertools.chain(*results))
 
+    def query_net_position(self, day: pd.Timestamp):
+        r = self.s.get(self.BASEURL + 'netPos/index', params={
+            'date': day.isoformat()
+        })
+        r.raise_for_status()
+        return r.json()['netPos']
+
 
 class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None, co: str = None) -> pd.DataFrame:
@@ -86,3 +93,7 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
             super().query_final_domain(mtu=mtu, presolved=presolved, cne=cne, co=co)
         )
 
+    def query_net_position(self, day: pd.Timestamp):
+        return parse_net_positions(
+            super().query_net_position(day=day)
+        )
