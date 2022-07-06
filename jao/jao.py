@@ -3,7 +3,8 @@ import pandas as pd
 import json
 from multiprocessing import Pool
 import itertools
-from .parsers import parse_final_domain, parse_net_positions
+from .parsers import parse_final_domain, parse_net_positions, parse_active_constraints
+from typing import List, Dict
 
 __title__ = "jao-py"
 __version__ = "0.3.1"
@@ -34,7 +35,7 @@ class JaoPublicationToolClient:
             return r.json()
 
     def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None, co: str = None,
-                           urls_only: bool = False) -> list:
+                           urls_only: bool = False) -> List[Dict]:
         if type(mtu) != pd.Timestamp:
             raise Exception('Please use a timezoned pandas Timestamp object for mtu')
         if mtu.tzinfo is None:
@@ -79,12 +80,28 @@ class JaoPublicationToolClient:
 
         return list(itertools.chain(*results))
 
-    def query_net_position(self, day: pd.Timestamp):
+    def query_net_position(self, day: pd.Timestamp) -> List[Dict]:
         r = self.s.get(self.BASEURL + 'netPos/index', params={
             'date': day.isoformat()
         })
         r.raise_for_status()
         return r.json()['netPos']
+
+    def query_active_constraints(self, day: pd.Timestamp) -> List[Dict]:
+        # although the same skip/take mechanism is active on this endpoint as the final domain, this is not needed to be used
+        #   by definition active constraints are only a few so its overkill to start pagination
+        # for the same reason this endpoint returns a whole day at once instead of per hour since there are not many
+        #  and you probably want the whole day anyway
+        # for the date range to be correct make sure the day input has a timezone!
+        data = []
+        for mtu in pd.date_range(day, day + pd.Timedelta(days=1), freq='1h'):
+            r = self.s.get(self.BASEURL + 'shadowPrices/index', params={
+                'date': mtu.isoformat()
+            })
+            r.raise_for_status()
+            data += r.json()['data']
+
+        return data
 
 
 class JaoPublicationToolPandasClient(JaoPublicationToolClient):
@@ -93,7 +110,12 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
             super().query_final_domain(mtu=mtu, presolved=presolved, cne=cne, co=co)
         )
 
-    def query_net_position(self, day: pd.Timestamp):
+    def query_net_position(self, day: pd.Timestamp) -> pd.DataFrame:
         return parse_net_positions(
             super().query_net_position(day=day)
+        )
+
+    def query_active_constraints(self, day: pd.Timestamp) -> pd.DataFrame:
+        return parse_active_constraints(
+            super().query_active_constraints(day=day)
         )
