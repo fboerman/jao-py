@@ -3,11 +3,12 @@ import pandas as pd
 import json
 from multiprocessing import Pool
 import itertools
-from .parsers import parse_final_domain, parse_net_positions, parse_active_constraints
+from .parsers import parse_final_domain, parse_base_output
 from typing import List, Dict
+from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -80,12 +81,15 @@ class JaoPublicationToolClient:
 
         return list(itertools.chain(*results))
 
-    def query_net_position(self, day: pd.Timestamp) -> List[Dict]:
-        r = self.s.get(self.BASEURL + 'netPos/index', params={
+    def _query_base(self, day: pd.Timestamp, type: str) -> List[Dict]:
+        r = self.s.get(self.BASEURL + type + '/index', params={
             'date': day.isoformat()
         })
         r.raise_for_status()
-        return r.json()['netPos']
+        return r.json()[type]
+
+    def query_net_position(self, day: pd.Timestamp) -> List[Dict]:
+        return self._query_base(day, 'netPos')
 
     def query_active_constraints(self, day: pd.Timestamp) -> List[Dict]:
         # although the same skip/take mechanism is active on this endpoint as the final domain, this is not needed to be used
@@ -103,19 +107,47 @@ class JaoPublicationToolClient:
 
         return data
 
+    def query_maxbex(self, day: pd.Timestamp) -> List[Dict]:
+        return self._query_base(day, 'maxExchanges')
+
+    def query_minmax_np(self, day: pd.Timestamp) -> List[Dict]:
+        return self._query_base(day, 'maxNetPos')
+
 
 class JaoPublicationToolPandasClient(JaoPublicationToolClient):
-    def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None, co: str = None) -> pd.DataFrame:
+    def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None,
+                           co: str = None) -> pd.DataFrame:
         return parse_final_domain(
             super().query_final_domain(mtu=mtu, presolved=presolved, cne=cne, co=co)
         )
 
     def query_net_position(self, day: pd.Timestamp) -> pd.DataFrame:
-        return parse_net_positions(
+        return parse_base_output(
             super().query_net_position(day=day)
-        )
+        ).rename(columns=lambda x: x.replace('hub_', '')) \
+            .rename(columns={'DE': 'DE_LU'})
 
     def query_active_constraints(self, day: pd.Timestamp) -> pd.DataFrame:
-        return parse_active_constraints(
+        return parse_base_output(
             super().query_active_constraints(day=day)
+        ).rename(columns=lambda x: to_snake_case(x) if 'hub' not in x else x) \
+            .rename(columns={'id': 'id_original'}) \
+            .rename(columns=lambda x: x.replace('hub_', 'ptdf_'))
+
+    def query_maxbex(self, day: pd.Timestamp, from_zone: str = None, to_zone: str = None) -> pd.DataFrame:
+        df = parse_base_output(
+            super().query_maxbex(day=day)
+        ).rename(columns=lambda x: x.lstrip('border_').replace('_', '>'))
+
+        if from_zone is not None:
+            df = df[[c for c in df.columns if c.split('>')[0] == from_zone]]
+
+        if to_zone is not None:
+            df = df[[c for c in df.columns if c.split('>')[1] == to_zone]]
+
+        return df
+
+    def query_minmax_np(self, day: pd.Timestamp) -> List[Dict]:
+        return parse_base_output(
+            super().query_minmax_np(day=day)
         )
