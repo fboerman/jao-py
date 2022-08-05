@@ -3,12 +3,13 @@ import pandas as pd
 import json
 from multiprocessing import Pool
 import itertools
+from .exceptions import NoMatchingDataError
 from .parsers import parse_final_domain, parse_base_output
 from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.3.2"
+__version__ = "0.3.3"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -86,7 +87,10 @@ class JaoPublicationToolClient:
             'date': day.isoformat()
         })
         r.raise_for_status()
-        return r.json()[type]
+        data = r.json()[type]
+        if len(data) == 0:
+            raise NoMatchingDataError
+        return data
 
     def query_net_position(self, day: pd.Timestamp) -> List[Dict]:
         return self._query_base(day, 'netPos')

@@ -1,0 +1,2 @@
+class NoMatchingDataError(Exception):
+    pass
