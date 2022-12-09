@@ -175,5 +175,6 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
         df = parse_base_output(
             super().query_validations(d_from=d_from, d_to=d_to)
         ).rename(columns=to_snake_case)
+        df['last_modified_on'] = pd.to_datetime(df['last_modified_on'], utc=True).dt.tz_convert('europe/amsterdam')
 
         return df
