@@ -9,13 +9,14 @@ from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.3.3"
+__version__ = "0.3.4"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
 
 class JaoPublicationToolClient:
     BASEURL = "https://publicationtool.jao.eu/core/api/core/"
+    BASEURL2 = "https://publicationtool.jao.eu/core/api/data/"
 
     def __init__(self, api_key: str = None):
         self.s = requests.Session()
@@ -92,6 +93,17 @@ class JaoPublicationToolClient:
             raise NoMatchingDataError
         return data
 
+    def _query_base_fromto(self, d_from: pd.Timestamp, d_to: pd.Timestamp, type: str) -> List[Dict]:
+        r = self.s.get(self.BASEURL2 + type, params={
+            'FromUTC': d_from.isoformat(),
+            'ToUTC': d_to.isoformat()
+        })
+        r.raise_for_status()
+        data = r.json()['data']
+        if len(data) == 0:
+            raise NoMatchingDataError
+        return data
+
     def query_net_position(self, day: pd.Timestamp) -> List[Dict]:
         return self._query_base(day, 'netPos')
 
@@ -110,6 +122,9 @@ class JaoPublicationToolClient:
             data += r.json()['data']
 
         return data
+
+    def query_validations(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
+        return self._query_base_fromto(d_from, d_to, 'validationReductions')
 
     def query_maxbex(self, day: pd.Timestamp) -> List[Dict]:
         return self._query_base(day, 'maxExchanges')
@@ -151,7 +166,15 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
 
         return df
 
-    def query_minmax_np(self, day: pd.Timestamp) -> List[Dict]:
+    def query_minmax_np(self, day: pd.Timestamp) -> pd.DataFrame:
         return parse_base_output(
             super().query_minmax_np(day=day)
         )
+
+    def query_validations(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
+        df = parse_base_output(
+            super().query_validations(d_from=d_from, d_to=d_to)
+        ).rename(columns=to_snake_case)
+        df['last_modified_on'] = pd.to_datetime(df['last_modified_on'], utc=True).dt.tz_convert('europe/amsterdam')
+
+        return df
