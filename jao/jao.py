@@ -9,7 +9,7 @@ from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.3.4"
+__version__ = "0.3.5"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
