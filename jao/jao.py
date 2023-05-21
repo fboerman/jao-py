@@ -9,7 +9,7 @@ from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.3.5"
+__version__ = "0.3.6"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -132,6 +132,9 @@ class JaoPublicationToolClient:
     def query_minmax_np(self, day: pd.Timestamp) -> List[Dict]:
         return self._query_base(day, 'maxNetPos')
 
+    def query_allocationconstraint(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
+        return self._query_base_fromto(d_from, d_to, 'allocationConstraint')
+
 
 class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None,
@@ -139,6 +142,11 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
         return parse_final_domain(
             super().query_final_domain(mtu=mtu, presolved=presolved, cne=cne, co=co)
         )
+
+    def query_allocationconstraint(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
+        return parse_base_output(
+            super().query_allocationconstraint(d_from=d_from, d_to=d_to)
+        ).rename(columns=lambda c: c.split('_')[1] + '_' + ('import' if 'Down' in c.split('_')[0] else 'export'))
 
     def query_net_position(self, day: pd.Timestamp) -> pd.DataFrame:
         return parse_base_output(
