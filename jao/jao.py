@@ -9,7 +9,7 @@ from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.3.6"
+__version__ = "0.3.7"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -135,6 +135,9 @@ class JaoPublicationToolClient:
     def query_allocationconstraint(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
         return self._query_base_fromto(d_from, d_to, 'allocationConstraint')
 
+    def query_status(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
+        return self._query_base_fromto(d_from, d_to, 'spanningDefaultFBP')
+
 
 class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None,
@@ -186,3 +189,8 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
         df['last_modified_on'] = pd.to_datetime(df['last_modified_on'], utc=True).dt.tz_convert('europe/amsterdam')
 
         return df
+
+    def query_status(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
+        return parse_base_output(
+            super().query_status(d_from=d_from, d_to=d_to)
+        ).drop(columns=['lastModifiedOn'])
