@@ -9,7 +9,7 @@ from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.3.7"
+__version__ = "0.3.8"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -120,6 +120,8 @@ class JaoPublicationToolClient:
             })
             r.raise_for_status()
             data += r.json()['data']
+        if len(data) == 0:
+            raise NoMatchingDataError
 
         return data
 
