@@ -9,7 +9,7 @@ from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.3.8"
+__version__ = "0.3.9"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -125,6 +125,9 @@ class JaoPublicationToolClient:
 
         return data
 
+    def query_lta(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
+        return self._query_base_fromto(d_from, d_to, 'lta')
+
     def query_validations(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
         return self._query_base_fromto(d_from, d_to, 'validationReductions')
 
@@ -182,6 +185,11 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def query_minmax_np(self, day: pd.Timestamp) -> pd.DataFrame:
         return parse_base_output(
             super().query_minmax_np(day=day)
+        )
+
+    def query_lta(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
+        return parse_base_output(
+            super().query_lta(d_from=d_from, d_to=d_to)
         )
 
     def query_validations(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
