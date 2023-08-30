@@ -1,5 +1,6 @@
 import requests
 from ..parsers import parse_final_domain
+from ..exceptions import NoMatchingDataError
 import pandas as pd
 
 
@@ -30,6 +31,8 @@ class JaoPublicationToolNordicsPandasClient:
 
     def query_final_domain(self, mtu):
         data = self._query_base(mtu, 'finalComputation')
+        if len(data) == 0:
+            raise NoMatchingDataError
         df = parse_final_domain(data)\
             .dropna(axis=1, how='all')\
             .drop(columns=['id_original'])
@@ -41,6 +44,8 @@ class JaoPublicationToolNordicsPandasClient:
 
     def query_minmax(self, mtu):
         data = self._query_base(mtu, 'maxNetPos')
+        if len(data) == 0:
+            raise NoMatchingDataError
         # will always return the whole day
         df = pd.DataFrame(data)
         df['mtu'] = pd.to_datetime(df['dateTimeUtc'], utc=True).dt.tz_convert('europe/amsterdam')

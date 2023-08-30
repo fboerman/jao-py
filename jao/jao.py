@@ -9,7 +9,7 @@ from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.3.9"
+__version__ = "0.3.10"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -61,6 +61,10 @@ class JaoPublicationToolClient:
             'take': 0
         })
         r.raise_for_status()
+
+        if len(r.json()['data']) == 0:
+            raise NoMatchingDataError
+
         # now do new call with all data requested
         # jao servers are not great returning it all at once, but they let you choose your own pagination
         # lets go for chunks of 5000, arbitrarily chosen
