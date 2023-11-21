@@ -28,13 +28,14 @@ class JaoAPIClient:
         r.raise_for_status()
         return [x['value'] for x in r.json()]
 
-    def query_auction_details_by_month(self, corridor: str, month: date, shadow_auctions_only: bool = False) -> dict:
+    def query_auction_details_by_month(self, corridor: str, month: date, horizon: str, shadow_auctions_only: bool = False) -> dict:
         """
         get the auction data for a specified month. gives basically everything but the bids themselves
 
         :param shadow_auctions_only: wether to only retrieve shadow auction results
         :param corridor: string of a valid jao corridor from query_corridors
         :param month: datetime.date object for the month you want the auction data of
+        :param horizon: string object for the horizon you want the auction data of
         :return:
         """
         # prepare the specific input arguments needed, start day the day before the months begin
@@ -45,7 +46,7 @@ class JaoAPIClient:
         r = self.s.get(self.BASEURL + 'getauctions', params={
             'corridor': corridor,
             'fromdate': (month_begin - timedelta(days=1)).strftime("%Y-%m-%d"),
-            'horizon': 'Monthly',
+            'horizon': horizon,
             'todate': month_end.strftime("%Y-%m-%d"),
             'shadow': int(shadow_auctions_only)
         })
@@ -94,7 +95,6 @@ class JaoAPIClient:
                     .dt.tz_convert('europe/amsterdam')
             return df
 
-
     def query_auction_bids_by_id(self, auction_id: str, as_dict: bool = False) -> Union[pd.DataFrame, list]:
         r = self.s.get(self.BASEURL + "getbids", params={
             'auctionid': auction_id
@@ -107,7 +107,7 @@ class JaoAPIClient:
         else:
             return pd.DataFrame(r.json())
 
-    def query_auction_stats_months(self, month_from: date, month_to: date, corridor: str) -> pd.DataFrame:
+    def query_auction_stats_months(self, month_from: date, month_to: date, corridor: str, horizon: str = 'Monthly') -> pd.DataFrame:
         """
         gets the following statistics for the give range of months (included both ends) in a dataframe:
         id
@@ -127,6 +127,7 @@ class JaoAPIClient:
         :param month_from: datetime.date object of start month
         :param month_to: datetime.date object of end month
         :param corridor: string of a valid jao corridor from query_corridors
+        :param horizon: string of a valid jao horizon from query_horizons
         :return:
         """
         detail_keys = ['bidGateOpening', 'bidGateClosure', 'offeredCapacity', 'atc',
@@ -135,7 +136,7 @@ class JaoAPIClient:
         data = []
         m = month_from
         while m <= month_to:
-            m_details = self.query_auction_details_by_month(corridor=corridor, month=m)
+            m_details = self.query_auction_details_by_month(corridor=corridor, month=m, horizon=horizon)
             m_data = {
                 'id': m_details['identification'],
                 'corridor': corridor,
