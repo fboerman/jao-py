@@ -9,7 +9,7 @@ from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.3.12"
+__version__ = "0.3.13"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -199,8 +199,8 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def query_validations(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
         df = parse_base_output(
             super().query_validations(d_from=d_from, d_to=d_to)
-        ).rename(columns=to_snake_case)
-        df['last_modified_on'] = pd.to_datetime(df['last_modified_on'], utc=True).dt.tz_convert('europe/amsterdam')
+        ).rename(columns=to_snake_case).drop(columns=['last_modified_on'])
+        #df['last_modified_on'] = pd.to_datetime(df['last_modified_on'], utc=True).dt.tz_convert('europe/amsterdam')
 
         return df
 
