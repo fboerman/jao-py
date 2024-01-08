@@ -15,8 +15,7 @@ __license__ = "MIT"
 
 
 class JaoPublicationToolClient:
-    BASEURL = "https://publicationtool.jao.eu/core/api/core/"
-    BASEURL2 = "https://publicationtool.jao.eu/core/api/data/"
+    BASEURL = "https://publicationtool.jao.eu/core/api/data/"
 
     def __init__(self, api_key: str = None):
         self.s = requests.Session()
@@ -46,19 +45,20 @@ class JaoPublicationToolClient:
         mtu = mtu.tz_convert('UTC')
         if cne is not None or co is not None or bool is not None:
             filter = {
-                'cneName': "" if cne is None else cne,
-                'contingency': "" if co is None else co,
-                'presolved': presolved
+                'CnecName': "" if cne is None else cne,
+                'Contingency': "" if co is None else co,
+                'Presolved': presolved
             }
         else:
             filter = None
 
         # first do a call with zero retrieved data to know how much data is available, then pull all at once
-        r = self.s.get(self.BASEURL + "finalComputation/index", params={
-            'date': mtu.isoformat(),
-            'search': json.dumps(filter),
-            'skip': 0,
-            'take': 0
+        r = self.s.get(self.BASEURL + "finalComputation", params={
+            'FromUtc': mtu.isoformat(),
+            'ToUtc': (mtu + pd.Timedelta(hours=1)).isoformat(),
+            'Filter': json.dumps(filter),
+            'Skip': 0,
+            'Take': 0
         })
         r.raise_for_status()
 
@@ -72,11 +72,12 @@ class JaoPublicationToolClient:
         total_num_data = r.json()['totalRowsWithFilter']
         args = []
         for i in range(0, total_num_data, 5000):
-            args.append((self.BASEURL + "finalComputation/index", {
-                'date': mtu.isoformat(),
-                'search': json.dumps(filter),
-                'skip': i,
-                'take': 5000
+            args.append((self.BASEURL + "finalComputation", {
+                'FromUtc': mtu.isoformat(),
+                'ToUtc': (mtu + pd.Timedelta(hours=1)).isoformat(),
+                'Filter': json.dumps(filter),
+                'Skip': i,
+                'Take': 5000
             }, 'data'))
 
         if urls_only:
@@ -98,7 +99,7 @@ class JaoPublicationToolClient:
         return data
 
     def _query_base_fromto(self, d_from: pd.Timestamp, d_to: pd.Timestamp, type: str) -> List[Dict]:
-        r = self.s.get(self.BASEURL2 + type, params={
+        r = self.s.get(self.BASEURL + type, params={
             'FromUTC': d_from.isoformat(),
             'ToUTC': d_to.isoformat()
         })

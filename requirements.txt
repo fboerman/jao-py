@@ -5,3 +5,4 @@ python-dateutil
 pillow
 beautifulsoup4
 lxml
+pytest
