@@ -1,4 +1,6 @@
 # jao-py
+![tests](https://github.com/fboerman/jao-py/actions/workflows/run-tests.yml/badge.svg)
+
 Python client for the various endpoints offered by jao.eu, the Joint Allocation Office.
 "Europe's single leading trading platform( e-CAT) for cross-border transmission capacity"
 
