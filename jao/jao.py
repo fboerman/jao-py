@@ -99,10 +99,11 @@ class JaoPublicationToolClient:
             raise NoMatchingDataError
         return data
 
-    def _query_base_day(self, day: pd.Timestamp) -> List[Dict]:
+    def _query_base_day(self, day: pd.Timestamp, type: str) -> List[Dict]:
         return self._query_base_fromto(
             d_from=day.replace(hour=0, minute=0),
             d_to=day.replace(hour=0, minute=0) + pd.Timedelta(days=1),
+            type=type
         )
 
     def query_net_position(self, day: pd.Timestamp) -> List[Dict]:
@@ -117,17 +118,11 @@ class JaoPublicationToolClient:
         # for the same reason this endpoint returns a whole day at once instead of per hour since there are not many
         #  and you probably want the whole day anyway
         # for the date range to be correct make sure the day input has a timezone!
-        data = []
-        for mtu in pd.date_range(day, day + pd.Timedelta(days=1), freq='1h'):
-            r = self.s.get(self.BASEURL + 'shadowPrices/index', params={
-                'date': mtu.isoformat()
-            })
-            r.raise_for_status()
-            data += r.json()['data']
-        if len(data) == 0:
-            raise NoMatchingDataError
 
-        return data
+        return self._query_base_day(
+            day=day,
+            type='shadowPrices'
+        )
 
     def query_lta(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
         return self._query_base_fromto(d_from, d_to, 'lta')
@@ -136,10 +131,10 @@ class JaoPublicationToolClient:
         return self._query_base_fromto(d_from, d_to, 'validationReductions')
 
     def query_maxbex(self, day: pd.Timestamp) -> List[Dict]:
-        return self._query_base(day, 'maxExchanges')
+        return self._query_base_day(day, 'maxExchanges')
 
     def query_minmax_np(self, day: pd.Timestamp) -> List[Dict]:
-        return self._query_base(day, 'maxNetPos')
+        return self._query_base_day(day, 'maxNetPos')
 
     def query_allocationconstraint(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
         return self._query_base_fromto(d_from, d_to, 'allocationConstraint')
@@ -199,9 +194,7 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def query_validations(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
         df = parse_base_output(
             super().query_validations(d_from=d_from, d_to=d_to)
-        ).rename(columns=to_snake_case).drop(columns=['last_modified_on'])
-        #df['last_modified_on'] = pd.to_datetime(df['last_modified_on'], utc=True).dt.tz_convert('europe/amsterdam')
-
+        ).rename(columns=to_snake_case)
         return df
 
     def query_status(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
