@@ -88,16 +88,6 @@ class JaoPublicationToolClient:
 
         return list(itertools.chain(*results))
 
-    def _query_base(self, day: pd.Timestamp, type: str) -> List[Dict]:
-        r = self.s.get(self.BASEURL + type + '/index', params={
-            'date': day.isoformat()
-        })
-        r.raise_for_status()
-        data = r.json()[type]
-        if len(data) == 0:
-            raise NoMatchingDataError
-        return data
-
     def _query_base_fromto(self, d_from: pd.Timestamp, d_to: pd.Timestamp, type: str) -> List[Dict]:
         r = self.s.get(self.BASEURL + type, params={
             'FromUTC': d_from.isoformat(),
@@ -109,8 +99,17 @@ class JaoPublicationToolClient:
             raise NoMatchingDataError
         return data
 
+    def _query_base_day(self, day: pd.Timestamp) -> List[Dict]:
+        return self._query_base_fromto(
+            d_from=day.replace(hour=0, minute=0),
+            d_to=day.replace(hour=0, minute=0) + pd.Timedelta(days=1),
+        )
+
     def query_net_position(self, day: pd.Timestamp) -> List[Dict]:
-        return self._query_base(day, 'netPos')
+        return self._query_base_day(
+            day=day,
+            type='netPos'
+        )
 
     def query_active_constraints(self, day: pd.Timestamp) -> List[Dict]:
         # although the same skip/take mechanism is active on this endpoint as the final domain, this is not needed to be used

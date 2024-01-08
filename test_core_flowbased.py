@@ -21,3 +21,12 @@ def test_final_domain(client, mtu):
         presolved=True
     )
     assert len(df) == 117
+
+
+def test_net_position(client, mtu):
+    df = client.query_net_position(
+        day=mtu
+    )
+    assert len(df) == 24
+    assert len(df.columns) == 14
+
