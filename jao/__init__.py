@@ -1,2 +1,2 @@
-from .jao import JaoPublicationToolClient, JaoPublicationToolPandasClient
+from .jao import JaoPublicationToolClient, JaoPublicationToolPandasClient, JaoPublicationToolPandasNordics
 from .webservice import JaoAPIClient

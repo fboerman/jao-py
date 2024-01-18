@@ -9,7 +9,7 @@ from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -201,3 +201,24 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
         return parse_base_output(
             super().query_status(d_from=d_from, d_to=d_to)
         ).drop(columns=['lastModifiedOn'])
+
+
+class JaoPublicationToolPandasNordics(JaoPublicationToolPandasClient):
+    BASEURL = "https://parallelrun-publicationtool.jao.eu/nordic/api/data/"
+
+    # not implemented means that jao does not provide this endpoint for the nordics
+
+    def query_lta(self, d_from: pd.Timestamp, d_to: pd.Timestamp):
+        raise NotImplementedError
+
+    def query_status(self, d_from: pd.Timestamp, d_to: pd.Timestamp):
+        raise NotImplementedError
+
+    def query_active_constraints(self, day: pd.Timestamp):
+        raise NotImplementedError
+
+    def query_allocationconstraint(self, d_from: pd.Timestamp, d_to: pd.Timestamp):
+        raise NotImplementedError
+
+    def query_net_position(self, day: pd.Timestamp):
+        raise NotImplementedError
