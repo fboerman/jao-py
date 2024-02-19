@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import requests
 import pandas as pd
 import json
@@ -5,7 +7,7 @@ from multiprocessing import Pool
 import itertools
 from .exceptions import NoMatchingDataError
 from .parsers import parse_final_domain, parse_base_output
-from typing import List, Dict
+from typing import List, Dict, Union
 from .util import to_snake_case
 
 __title__ = "jao-py"
@@ -106,7 +108,7 @@ class JaoPublicationToolClient:
             type=type
         )
 
-    def query_net_position(self, day: pd.Timestamp) -> List[Dict]:
+    def query_net_position(self, day: Union[pd.Timestamp, datetime]) -> List[Dict]:
         return self._query_base_day(
             day=day,
             type='netPos'
@@ -142,6 +144,14 @@ class JaoPublicationToolClient:
     def query_status(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
         return self._query_base_fromto(d_from, d_to, 'spanningDefaultFBP')
 
+    def query_price_spread(self, d_from: Union[pd.Timestamp, datetime], d_to: Union[pd.Timestamp, datetime]) -> (
+            List)[Dict]:
+        return self._query_base_fromto(d_from, d_to, 'priceSpread')
+
+    def query_sched_exchange(self, d_from: Union[pd.Timestamp, datetime], d_to: Union[pd.Timestamp, datetime]) -> (
+            List)[Dict]:
+        return self._query_base_fromto(d_from, d_to, 'scheduledExchanges')
+
 
 class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None,
@@ -155,7 +165,7 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
             super().query_allocationconstraint(d_from=d_from, d_to=d_to)
         ).rename(columns=lambda c: c.split('_')[1] + '_' + ('import' if 'Down' in c.split('_')[0] else 'export'))
 
-    def query_net_position(self, day: pd.Timestamp) -> pd.DataFrame:
+    def query_net_position(self, day: Union[pd.Timestamp, datetime]) -> pd.DataFrame:
         return parse_base_output(
             super().query_net_position(day=day)
         ).rename(columns=lambda x: x.replace('hub_', '')) \
@@ -201,3 +211,15 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
         return parse_base_output(
             super().query_status(d_from=d_from, d_to=d_to)
         ).drop(columns=['lastModifiedOn'])
+
+    def query_price_spread(self, d_from: Union[pd.Timestamp, datetime], d_to: Union[pd.Timestamp, datetime]) -> (
+            pd.DataFrame):
+        return parse_base_output(
+            super().query_price_spread(d_from=d_from, d_to=d_to)
+        )
+
+    def query_sched_exchange(self, d_from: Union[pd.Timestamp, datetime], d_to: Union[pd.Timestamp, datetime]) -> (
+            pd.DataFrame):
+        return parse_base_output(
+            super().query_sched_exchange(d_from=d_from, d_to=d_to)
+        )
