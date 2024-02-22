@@ -142,6 +142,12 @@ class JaoPublicationToolClient:
     def query_status(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
         return self._query_base_fromto(d_from, d_to, 'spanningDefaultFBP')
 
+    def query_price_spread(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
+        return self._query_base_fromto(d_from, d_to, 'priceSpread')
+
+    def query_scheduled_exchange(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
+        return self._query_base_fromto(d_from, d_to, 'scheduledExchanges')
+
 
 class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None,
@@ -201,3 +207,15 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
         return parse_base_output(
             super().query_status(d_from=d_from, d_to=d_to)
         ).drop(columns=['lastModifiedOn'])
+
+    def query_price_spread(self, d_from: pd.Timestamp, datetime, d_to: pd.Timestamp) -> (
+            pd.DataFrame):
+        return parse_base_output(
+            super().query_price_spread(d_from=d_from, d_to=d_to)
+        )
+
+    def query_scheduled_exchange(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> (
+            pd.DataFrame):
+        return parse_base_output(
+            super().query_scheduled_exchange(d_from=d_from, d_to=d_to)
+        )

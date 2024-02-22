@@ -43,13 +43,21 @@ class JaoAPIClient:
 
         month_begin = month.replace(day=1)
         month_end = month.replace(day=monthrange(month.year, month.month)[1])
-        r = self.s.get(self.BASEURL + 'getauctions', params={
-            'corridor': corridor,
-            'fromdate': (month_begin - timedelta(days=1)).strftime("%Y-%m-%d"),
-            'horizon': horizon,
-            'todate': month_end.strftime("%Y-%m-%d"),
-            'shadow': int(shadow_auctions_only)
-        })
+        if horizon == 'Yearly':
+            r = self.s.get(self.BASEURL + 'getauctions', params={
+                'corridor': corridor,
+                'fromdate': month.strftime('%Y-%m-%d'),
+                'horizon': horizon,
+                'shadow': int(shadow_auctions_only)
+            })
+        else:
+            r = self.s.get(self.BASEURL + 'getauctions', params={
+                'corridor': corridor,
+                'fromdate': (month_begin - timedelta(days=1)).strftime("%Y-%m-%d"),
+                'horizon': horizon,
+                'todate': month_end.strftime("%Y-%m-%d"),
+                'shadow': int(shadow_auctions_only)
+            })
 
         r.raise_for_status()
 
