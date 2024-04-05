@@ -9,7 +9,7 @@ from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.4.4"
+__version__ = "0.4.5"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -100,9 +100,16 @@ class JaoPublicationToolClient:
         return data
 
     def _query_base_day(self, day: pd.Timestamp, type: str) -> List[Dict]:
+        d_from = day.replace(hour=0, minute=0)
+        d_to = day.replace(hour=0, minute=0) + pd.Timedelta(days=1)
+        # the api does some funny stuff on dst days, so adjust the to for this edge case
+        if d_from.dst() > d_to.dst():
+            d_to += pd.Timedelta(hours=1)
+        elif d_from.dst() < d_to.dst():
+            d_to -= pd.Timedelta(hours=1)
         return self._query_base_fromto(
-            d_from=day.replace(hour=0, minute=0),
-            d_to=day.replace(hour=0, minute=0) + pd.Timedelta(days=1),
+            d_from=d_from,
+            d_to=d_to,
             type=type
         )
 
