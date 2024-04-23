@@ -54,7 +54,7 @@ class JaoAPIClient:
         elif horizon == 'Yearly':
             r = self.s.get(self.BASEURL + 'getauctions', params={
                 'corridor': corridor,
-                'fromdate': query_date.strftime("%Y-12-31"),
+                'fromdate': f"{query_date.year-1}-12-31",
                 'horizon': horizon,
                 'shadow': int(shadow_auctions_only)
             })
@@ -80,10 +80,9 @@ class JaoAPIClient:
 
         return data
 
-    def query_auction_details_by_month(self, corridor: str, query_date: date, shadow_auctions_only: bool = False) -> dict:
-        data = self.query_auction_details(corridor, query_date, "Monthly", shadow_auctions_only)
+    def query_auction_details_by_month(self, corridor: str, query_date: date, horizon="Monthly", shadow_auctions_only: bool = False) -> dict:
+        data = self.query_auction_details(corridor, query_date, horizon, shadow_auctions_only)
         return data
-
 
     def query_auction_bids_by_month(self, corridor: str, month: date, as_dict: bool = False) -> Union[pd.DataFrame, dict]:
         """
