@@ -175,6 +175,10 @@ class JaoAPIClient:
                 m += relativedelta(months=1)
             elif horizon == "Yearly":
                 m += relativedelta(years=1)
+            elif horizon == "Intraday":
+                m += relativedelta(hours=1)
+            else:
+                m += relativedelta(days=7)
         df = pd.DataFrame(data)
         df['resoldCapacity'].astype(float).fillna(0, inplace=True)
         df['nonAllocatedCapacity'] = df['offeredCapacity'] - df['allocatedCapacity']
