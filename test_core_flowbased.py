@@ -84,7 +84,7 @@ def test_validation(client):
         d_to=mtu + pd.Timedelta(hours=1)
     )
     assert len(df) == 13
-    assert len(df.columns) == 28
+    assert len(df.columns) == 29
 
 
 def test_status(client, mtu):
