@@ -1,3 +1,3 @@
-from .jao import JaoPublicationToolClient, JaoPublicationToolPandasClient
-from .jao_par_run import JaoPublicationToolPandasNordics, JaoPublicationToolPandasIntraDay
+from .jao import JaoPublicationToolClient, JaoPublicationToolPandasClient, JaoPublicationToolPandasIntraDay
+from .jao_par_run import JaoPublicationToolPandasNordics
 from .webservice import JaoAPIClient

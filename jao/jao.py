@@ -9,7 +9,7 @@ from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.4.5"
+__version__ = "0.4.6"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -226,3 +226,48 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
         return parse_base_output(
             super().query_scheduled_exchange(d_from=d_from, d_to=d_to)
         )
+
+
+class JaoPublicationToolPandasIntraDay(JaoPublicationToolPandasClient):
+    BASEURL = "https://publicationtool.jao.eu/coreID/api/data/ID2_"
+
+    def query_lta(self, d_from: pd.Timestamp, d_to: pd.Timestamp):
+        raise NotImplementedError
+
+    def query_status(self, d_from: pd.Timestamp, d_to: pd.Timestamp):
+        raise NotImplementedError
+
+    def query_active_constraints(self, day: pd.Timestamp):
+        raise NotImplementedError
+
+    def query_sidc_atc_raw(self, day: pd.Timestamp) -> List[Dict]:
+        return self._query_base_day(day, 'intradayAtc')
+
+    def query_sidc_ntc_raw(self, day: pd.Timestamp) -> List[Dict]:
+        return self._query_base_day(day, 'intradayNtc')
+
+    def query_sidc_atc(self, day: pd.Timestamp, from_zone: str = None, to_zone: str = None) -> pd.DataFrame:
+        df = parse_base_output(
+            self.query_sidc_atc_raw(day=day)
+        ).rename(columns=lambda x: x.lstrip('border_').replace('_', '>'))
+
+        if from_zone is not None:
+            df = df[[c for c in df.columns if c.split('>')[0] == from_zone]]
+
+        if to_zone is not None:
+            df = df[[c for c in df.columns if c.split('>')[1] == to_zone]]
+
+        return df
+
+    def query_sidc_ntc(self, day: pd.Timestamp, from_zone: str = None, to_zone: str = None) -> pd.DataFrame:
+        df = parse_base_output(
+            self.query_sidc_ntc_raw(day=day)
+        ).rename(columns=lambda x: x.lstrip('border_').replace('_', '>'))
+
+        if from_zone is not None:
+            df = df[[c for c in df.columns if c.split('>')[0] == from_zone]]
+
+        if to_zone is not None:
+            df = df[[c for c in df.columns if c.split('>')[1] == to_zone]]
+
+        return df
