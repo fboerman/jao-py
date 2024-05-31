@@ -40,6 +40,10 @@ class JaoAPIClient:
         """
         # prepare the specific input arguments needed, start day the day before the months begin
         # end date the last day of the month
+        
+        if horizon == 'Weekly':
+            # weekly must start on monday
+            query_date += relativedelta(weekday=0)
 
         if horizon == "Monthly":
             month_begin = query_date.replace(day=1)
@@ -72,11 +76,16 @@ class JaoAPIClient:
         r.raise_for_status()
 
         data = r.json()
-        # prettify the results to only show the first products and results
-        data = data[0]
-        data = {**data, **data['results'][0], **data['products'][0]}
-        del data['results']
-        del data['products']
+
+        try:
+            # prettify the results to only show the first products and results
+            data = data[0]
+            data = {**data, **data['results'][0], **data['products'][0]}
+            del data['results']
+            del data['products']
+        except Exception:
+            print(data)
+            raise
 
         return data
 
@@ -168,7 +177,7 @@ class JaoAPIClient:
             data.append(m_data)
 
             if horizon == "Weekly":
-                m += relativedelta(weeks=1)
+                m += relativedelta(weeks=1, weekday=1)
             elif horizon == "Daily":
                 m += relativedelta(days=1)
             elif horizon == "Monthly":
