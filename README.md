@@ -23,8 +23,8 @@ The package comes with the current pandas clients:
 - [`JaoPublicationToolPandasIntraDay`](#JaoPublicationToolPandasIntraDay): client for CORE Intradaypublication tool for Intraday defined [here](https://publicationtool.jao.eu/coreID/)
 The publication tool clients have valid data from their respective go lives:
 - CORE Day Ahead: business day 2022-06-09 onwards
-- CORE Intraday(a): business day 2024-05-29 onwards
-- CORE Intraday(b): business day 2024-06-14 onwards
+- CORE Intraday(b): business day 2024-05-29 onwards
+- CORE Intraday(a): business day 2024-06-14 onwards
 
 CORE Intraday a and b are combined in the same intraday client. In the initialization of the client you can choose which one you want like so:
 ```python
