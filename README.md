@@ -17,12 +17,22 @@ supply a pull request yourself.
 
 ## Usage
 ### Current clients
-The package comes with 2 current clients:
+The package comes with the current pandas clients:
 - [`JaoAPIClient`](#JaoAPIClient): api client for the webservice API defined [here](https://www.jao.eu/page-api/market-data)
-- [`JaoPublicationToolClient`](#JaoPublicationToolClient): client for the CORE publication tool defined [here](https://publicationtool.jao.eu/core/)
-- [`JaoPublicationToolPandasClient`](#JaoPublicationToolPandasClient): Same as previous one but then it returns pandas dataframes instead of raw retrieved data
+- [`JaoPublicationToolClient`](#JaoPublicationToolClient): client for the CORE Day Ahead publication tool defined [here](https://publicationtool.jao.eu/core/)
+- [`JaoPublicationToolPandasIntraDay`](#JaoPublicationToolPandasIntraDay): client for CORE Intradaypublication tool for Intraday defined [here](https://publicationtool.jao.eu/coreID/)
+The publication tool clients have valid data from their respective go lives:
+- CORE Day Ahead: business day 2022-06-09 onwards
+- CORE Intraday(a): business day 2024-05-29 onwards
+- CORE Intraday(b): business day 2024-06-14 onwards
 
-The publication tool clients have valid data from business day 2022-06-09 onwards.
+CORE Intraday a and b are combined in the same intraday client. In the initialization of the client you can choose which one you want like so:
+```python
+from jao import JaoPublicationToolPandasIntraDay
+
+client = JaoPublicationToolPandasIntraDay(version='a') # IDCC(a)
+client = JaoPublicationToolPandasIntraDay(version='b') # IDCC(b)
+```
 
 ### Deprecated clients
 The package also includes legacy clients for flowbased CWE data in the CWE subpackage. These return data up until business day 2022-06-08

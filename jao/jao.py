@@ -9,7 +9,7 @@ from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.4.6"
+__version__ = "0.4.7"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -229,7 +229,14 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
 
 
 class JaoPublicationToolPandasIntraDay(JaoPublicationToolPandasClient):
-    BASEURL = "https://publicationtool.jao.eu/coreID/api/data/ID2_"
+    def __init__(self, version):
+        super().__init__()
+        if version == 'a':
+            self.BASEURL = "https://publicationtool.jao.eu/coreID/api/data/IDCCA_"
+        elif version == 'b':
+            self.BASEURL = "https://publicationtool.jao.eu/coreID/api/data/IDCCB_"
+        else:
+            raise NotImplementedError
 
     def query_lta(self, d_from: pd.Timestamp, d_to: pd.Timestamp):
         raise NotImplementedError
