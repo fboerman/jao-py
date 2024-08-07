@@ -9,7 +9,7 @@ from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.4.7"
+__version__ = "0.4.8"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -155,6 +155,9 @@ class JaoPublicationToolClient:
     def query_scheduled_exchange(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
         return self._query_base_fromto(d_from, d_to, 'scheduledExchanges')
 
+    def query_alpha_factor(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
+        return self._query_base_fromto(d_from, d_to, 'alphaFactor')
+
 
 class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None,
@@ -215,6 +218,11 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
             super().query_status(d_from=d_from, d_to=d_to)
         ).drop(columns=['lastModifiedOn'])
 
+    def query_alpha_factor(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
+        return parse_base_output(
+            super().query_alpha_factor(d_from=d_from, d_to=d_to)
+        ).drop(columns=['lastModifiedOn'])
+
     def query_price_spread(self, d_from: pd.Timestamp, datetime, d_to: pd.Timestamp) -> (
             pd.DataFrame):
         return parse_base_output(
@@ -245,6 +253,9 @@ class JaoPublicationToolPandasIntraDay(JaoPublicationToolPandasClient):
         raise NotImplementedError
 
     def query_active_constraints(self, day: pd.Timestamp):
+        raise NotImplementedError
+
+    def query_alpha_factor(self, d_from: pd.Timestamp, d_to: pd.Timestamp):
         raise NotImplementedError
 
     def query_sidc_atc_raw(self, day: pd.Timestamp) -> List[Dict]:
