@@ -4,12 +4,12 @@ import json
 from multiprocessing import Pool
 import itertools
 from .exceptions import NoMatchingDataError
-from .parsers import parse_final_domain, parse_base_output
+from .parsers import parse_final_domain, parse_base_output, parse_monitoring
 from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.4.8"
+__version__ = "0.4.9"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -20,7 +20,7 @@ class JaoPublicationToolClient:
     def __init__(self, api_key: str = None):
         self.s = requests.Session()
         self.s.headers.update({
-            'user-agent': 'jao-py (github.com/fboerman/jao-py)'
+            'user-agent': f'jao-py {__version__} (github.com/fboerman/jao-py)'
         })
 
         if api_key is not None:
@@ -89,7 +89,11 @@ class JaoPublicationToolClient:
         return list(itertools.chain(*results))
 
     def _query_base_fromto(self, d_from: pd.Timestamp, d_to: pd.Timestamp, type: str) -> List[Dict]:
-        r = self.s.get(self.BASEURL + type, params={
+        if type in ['monitoring']:
+            url = self.BASEURL.replace('/data/', '/system/')
+        else:
+            url = self.BASEURL
+        r = self.s.get(url + type, params={
             'FromUTC': d_from.isoformat(),
             'ToUTC': d_to.isoformat()
         })
@@ -157,6 +161,9 @@ class JaoPublicationToolClient:
 
     def query_alpha_factor(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
         return self._query_base_fromto(d_from, d_to, 'alphaFactor')
+
+    def query_monitoring(self, day: pd.Timestamp) -> List[Dict]:
+        return self._query_base_day(day, 'monitoring')
 
 
 class JaoPublicationToolPandasClient(JaoPublicationToolClient):
@@ -233,6 +240,11 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
             pd.DataFrame):
         return parse_base_output(
             super().query_scheduled_exchange(d_from=d_from, d_to=d_to)
+        )
+
+    def query_monitoring(self, day: pd.Timestamp) -> pd.DataFrame:
+        return parse_monitoring(
+            super().query_monitoring(day=day)
         )
 
 
