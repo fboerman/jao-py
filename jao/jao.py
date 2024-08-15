@@ -9,7 +9,7 @@ from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.4.9"
+__version__ = "0.4.10"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -166,6 +166,35 @@ class JaoPublicationToolClient:
         return self._query_base_day(day, 'monitoring')
 
 
+class JaoPublicationToolIntraDay(JaoPublicationToolClient):
+    def __init__(self, version):
+        super().__init__()
+        if version == 'a':
+            self.BASEURL = "https://publicationtool.jao.eu/coreID/api/data/IDCCA_"
+        elif version == 'b':
+            self.BASEURL = "https://publicationtool.jao.eu/coreID/api/data/IDCCB_"
+        else:
+            raise NotImplementedError
+
+    def query_lta(self, d_from: pd.Timestamp, d_to: pd.Timestamp):
+        raise NotImplementedError
+
+    def query_status(self, d_from: pd.Timestamp, d_to: pd.Timestamp):
+        raise NotImplementedError
+
+    def query_active_constraints(self, day: pd.Timestamp):
+        raise NotImplementedError
+
+    def query_alpha_factor(self, d_from: pd.Timestamp, d_to: pd.Timestamp):
+        raise NotImplementedError
+
+    def query_sidc_atc(self, day: pd.Timestamp) -> List[Dict]:
+        return self._query_base_day(day, 'intradayAtc')
+
+    def query_sidc_ntc(self, day: pd.Timestamp) -> List[Dict]:
+        return self._query_base_day(day, 'intradayNtc')
+
+
 class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None,
                            co: str = None) -> pd.DataFrame:
@@ -248,37 +277,10 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
         )
 
 
-class JaoPublicationToolPandasIntraDay(JaoPublicationToolPandasClient):
-    def __init__(self, version):
-        super().__init__()
-        if version == 'a':
-            self.BASEURL = "https://publicationtool.jao.eu/coreID/api/data/IDCCA_"
-        elif version == 'b':
-            self.BASEURL = "https://publicationtool.jao.eu/coreID/api/data/IDCCB_"
-        else:
-            raise NotImplementedError
-
-    def query_lta(self, d_from: pd.Timestamp, d_to: pd.Timestamp):
-        raise NotImplementedError
-
-    def query_status(self, d_from: pd.Timestamp, d_to: pd.Timestamp):
-        raise NotImplementedError
-
-    def query_active_constraints(self, day: pd.Timestamp):
-        raise NotImplementedError
-
-    def query_alpha_factor(self, d_from: pd.Timestamp, d_to: pd.Timestamp):
-        raise NotImplementedError
-
-    def query_sidc_atc_raw(self, day: pd.Timestamp) -> List[Dict]:
-        return self._query_base_day(day, 'intradayAtc')
-
-    def query_sidc_ntc_raw(self, day: pd.Timestamp) -> List[Dict]:
-        return self._query_base_day(day, 'intradayNtc')
-
+class JaoPublicationToolPandasIntraDay(JaoPublicationToolIntraDay):
     def query_sidc_atc(self, day: pd.Timestamp, from_zone: str = None, to_zone: str = None) -> pd.DataFrame:
         df = parse_base_output(
-            self.query_sidc_atc_raw(day=day)
+            super().query_sidc_atc(day=day)
         ).rename(columns=lambda x: x.lstrip('border_').replace('_', '>'))
 
         if from_zone is not None:
@@ -291,7 +293,7 @@ class JaoPublicationToolPandasIntraDay(JaoPublicationToolPandasClient):
 
     def query_sidc_ntc(self, day: pd.Timestamp, from_zone: str = None, to_zone: str = None) -> pd.DataFrame:
         df = parse_base_output(
-            self.query_sidc_ntc_raw(day=day)
+            super().query_sidc_ntc(day=day)
         ).rename(columns=lambda x: x.lstrip('border_').replace('_', '>'))
 
         if from_zone is not None:
