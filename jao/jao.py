@@ -176,6 +176,14 @@ class JaoPublicationToolIntraDay(JaoPublicationToolClient):
         else:
             raise NotImplementedError
 
+    def query_monitoring(self, day: pd.Timestamp) -> List[Dict]:
+        # use this quick hack because this monitoring endpoint differs from all others
+        base_url_old = self.BASEURL
+        self.BASEURL = self.BASEURL.replace("IDCCA_", '').replace("IDCCB_", '')
+        data = self._query_base_day(day, 'monitoring')
+        self.BASEURL = base_url_old
+        return data
+
     def query_lta(self, d_from: pd.Timestamp, d_to: pd.Timestamp):
         raise NotImplementedError
 
