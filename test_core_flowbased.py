@@ -33,6 +33,12 @@ def test_allocationconstraint(client, mtu):
     assert df.iloc[0].to_list() == [7287, 0, None, 5538]
 
 
+def test_monitoring(client, mtu):
+    df = client.query_monitoring(mtu)
+    assert len(df) == 29
+    assert len(df.columns) == 6
+
+
 def test_net_position(client, mtu):
     df = client.query_net_position(
         day=mtu
@@ -95,3 +101,12 @@ def test_status(client, mtu):
         d_to=mtu + pd.Timedelta(hours=1)
     )
     assert len(df) == 3
+
+
+def test_d2cf(client, mtu):
+    df = client.query_d2cf(
+        d_from=mtu,
+        d_to=mtu + pd.Timedelta(hours=1)
+    )
+    assert len(df) == 1
+    assert len(df.columns) == 51

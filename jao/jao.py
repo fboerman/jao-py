@@ -9,7 +9,7 @@ from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.4.10"
+__version__ = "0.5.0"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -27,6 +27,8 @@ class JaoPublicationToolClient:
             self.s.headers.update({
                 'Authorization': 'Bearer ' + api_key
             })
+
+        self.NORDIC = 'nordic' in self.BASEURL
 
     def _starmap_pull(self, url, params, keyname=None):
         r = self.s.get(url, params=params)
@@ -132,7 +134,7 @@ class JaoPublicationToolClient:
 
         return self._query_base_day(
             day=day,
-            type='shadowPrices'
+            type='shadowPrices' if not self.NORDIC else 'fbDomainShadowPrice'
         )
 
     def query_lta(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
@@ -164,6 +166,12 @@ class JaoPublicationToolClient:
 
     def query_monitoring(self, day: pd.Timestamp) -> List[Dict]:
         return self._query_base_day(day, 'monitoring')
+
+    def query_d2cf(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
+        return self._query_base_fromto(
+            d_from=d_from, d_to=d_to,
+            type='d2CF' if not self.NORDIC else 'cgmForeCast'
+        )
 
 
 class JaoPublicationToolIntraDay(JaoPublicationToolClient):
@@ -282,6 +290,11 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def query_monitoring(self, day: pd.Timestamp) -> pd.DataFrame:
         return parse_monitoring(
             super().query_monitoring(day=day)
+        )
+
+    def query_d2cf(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
+        return parse_base_output(
+            super().query_d2cf(d_from=d_from, d_to=d_to)
         )
 
 

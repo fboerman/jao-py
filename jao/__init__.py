@@ -1,4 +1,4 @@
 from .jao import JaoPublicationToolClient, JaoPublicationToolPandasClient,\
     JaoPublicationToolIntraDay, JaoPublicationToolPandasIntraDay
-from .jao_par_run import JaoPublicationToolPandasNordics
+from .jao_nordic import JaoPublicationToolPandasNordics
 from .webservice import JaoAPIClient

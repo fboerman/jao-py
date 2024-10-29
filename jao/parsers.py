@@ -37,10 +37,12 @@ def parse_final_domain(data: List[Dict]) -> pd.DataFrame:
 
 def parse_monitoring(data: List[Dict]) -> pd.DataFrame:
     df = pd.DataFrame(data)
-    df['businessDay'] = pd.to_datetime(df['businessDayUtc'], utc=True).dt.tz_convert('europe/amsterdam').dt.date
+    if 'businessDayUtc' in df:
+        df['businessDay'] = pd.to_datetime(df['businessDayUtc'], utc=True).dt.tz_convert('europe/amsterdam').dt.date
+        df = df.drop(columns=['businessDayUtc'])
     for c in ['deadline', 'lastModifiedOn']:
         df[c] = pd.to_datetime(df[c], utc=True).dt.tz_convert('europe/amsterdam')
-    df=df.drop(columns=['businessDayUtc', 'id'])
+    df=df.drop(columns=['id'])
     return df
 
 
