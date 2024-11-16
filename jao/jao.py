@@ -9,7 +9,7 @@ from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -38,13 +38,8 @@ class JaoPublicationToolClient:
         else:
             return r.json()
 
-    def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None, co: str = None,
-                           urls_only: bool = False) -> List[Dict]:
-        if type(mtu) != pd.Timestamp:
-            raise Exception('Please use a timezoned pandas Timestamp object for mtu')
-        if mtu.tzinfo is None:
-            raise Exception('Please use a timezoned pandas Timestamp object for mtu')
-        mtu = mtu.tz_convert('UTC')
+    def _query_domain(self, url: str, mtu: pd.Timestamp, presolved: bool = None, cne: str = None, co: str = None,
+                           urls_only: bool = False):
         if cne is not None or co is not None or bool is not None:
             filter = {
                 'CnecName': "" if cne is None else cne,
@@ -55,7 +50,7 @@ class JaoPublicationToolClient:
             filter = None
 
         # first do a call with zero retrieved data to know how much data is available, then pull all at once
-        r = self.s.get(self.BASEURL + "finalComputation", params={
+        r = self.s.get(self.BASEURL + url, params={
             'FromUtc': mtu.isoformat(),
             'ToUtc': (mtu + pd.Timedelta(hours=1)).isoformat(),
             'Filter': json.dumps(filter),
@@ -74,7 +69,7 @@ class JaoPublicationToolClient:
         total_num_data = r.json()['totalRowsWithFilter']
         args = []
         for i in range(0, total_num_data, 5000):
-            args.append((self.BASEURL + "finalComputation", {
+            args.append((self.BASEURL + url, {
                 'FromUtc': mtu.isoformat(),
                 'ToUtc': (mtu + pd.Timedelta(hours=1)).isoformat(),
                 'Filter': json.dumps(filter),
@@ -89,6 +84,16 @@ class JaoPublicationToolClient:
             results = pool.starmap(self._starmap_pull, args)
 
         return list(itertools.chain(*results))
+
+    def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None, co: str = None,
+                           urls_only: bool = False) -> List[Dict]:
+        if type(mtu) != pd.Timestamp:
+            raise Exception('Please use a timezoned pandas Timestamp object for mtu')
+        if mtu.tzinfo is None:
+            raise Exception('Please use a timezoned pandas Timestamp object for mtu')
+        mtu = mtu.tz_convert('UTC')
+
+        return self._query_domain('finalComputation', mtu=mtu, presolved=presolved, cne=cne, co=co, urls_only=urls_only)
 
     def _query_base_fromto(self, d_from: pd.Timestamp, d_to: pd.Timestamp, type: str) -> List[Dict]:
         if type in ['monitoring']:
@@ -134,7 +139,7 @@ class JaoPublicationToolClient:
 
         return self._query_base_day(
             day=day,
-            type='shadowPrices' if not self.NORDIC else 'fbDomainShadowPrice'
+            type='shadowPrices'
         )
 
     def query_lta(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
