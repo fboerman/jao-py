@@ -34,6 +34,13 @@ client = JaoPublicationToolPandasIntraDay(version='a') # IDCC(a)
 client = JaoPublicationToolPandasIntraDay(version='b') # IDCC(b)
 ```
 
+There is also a client available for parallel run, which works in the exact same way as the intraday client above:
+```python
+from jao import JaoPublicationToolPandasIntraDayParRun
+
+client = JaoPublicationToolPandasIntraDayParRun('c') #IDCC(c)
+```
+
 ### Deprecated clients
 The package also includes legacy clients for flowbased CWE data in the CWE subpackage. These return data up until business day 2022-06-08
 - [`JaoUtilityToolASMXClient`](#JaoUtilityToolASMXClient): a very light wrapper around the ASMX Web Service API implemented as a passthrough to the suds-community pakcage
