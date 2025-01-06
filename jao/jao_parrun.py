@@ -32,6 +32,11 @@ class JaoPublicationToolPandasIntraDayParRun(JaoPublicationToolPandasClient):
         self.BASEURL = base_url_old
         return data
 
+    def query_fallbacks(self, day: pd.Timestamp) -> pd.DataFrame:
+        return parse_base_output(
+            self._query_base_day(day, 'fallbacks')
+        ).drop(columns=['lastModifiedOn'])
+
     def query_sidc_atc(self, day: pd.Timestamp, from_zone: str = None, to_zone: str = None) -> pd.DataFrame:
         df = parse_base_output(
             self._query_base_day(day, 'intradayAtc')
