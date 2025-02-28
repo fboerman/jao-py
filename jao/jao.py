@@ -9,7 +9,7 @@ from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.5.3"
+__version__ = "0.5.4"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -94,6 +94,17 @@ class JaoPublicationToolClient:
         mtu = mtu.tz_convert('UTC')
 
         return self._query_domain('finalComputation', mtu=mtu, presolved=presolved, cne=cne, co=co, urls_only=urls_only)
+
+    def query_initial_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None, co: str = None,
+                           urls_only: bool = False) -> List[Dict]:
+        if type(mtu) != pd.Timestamp:
+            raise Exception('Please use a timezoned pandas Timestamp object for mtu')
+        if mtu.tzinfo is None:
+            raise Exception('Please use a timezoned pandas Timestamp object for mtu')
+        mtu = mtu.tz_convert('UTC')
+
+        return self._query_domain('initialComputation', mtu=mtu, presolved=presolved, cne=cne, co=co, urls_only=urls_only)
+
 
     def _query_base_fromto(self, d_from: pd.Timestamp, d_to: pd.Timestamp, type: str) -> List[Dict]:
         if type in ['monitoring']:
@@ -184,6 +195,12 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
                            co: str = None) -> pd.DataFrame:
         return parse_final_domain(
             super().query_final_domain(mtu=mtu, presolved=presolved, cne=cne, co=co)
+        )
+
+    def query_initial_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None,
+                           co: str = None) -> pd.DataFrame:
+        return parse_final_domain(
+            super().query_initial_domain(mtu=mtu, presolved=presolved, cne=cne, co=co)
         )
 
     def query_allocationconstraint(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
