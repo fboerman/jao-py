@@ -9,7 +9,7 @@ from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.5.4"
+__version__ = "0.5.5"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -17,11 +17,15 @@ __license__ = "MIT"
 class JaoPublicationToolClient:
     BASEURL = "https://publicationtool.jao.eu/core/api/data/"
 
-    def __init__(self, api_key: str = None):
+    def __init__(self, api_key: str = None, proxies: dict = None):
         self.s = requests.Session()
         self.s.headers.update({
             'user-agent': f'jao-py {__version__} (github.com/fboerman/jao-py)'
         })
+
+        if proxies is not None:
+            # proxies should be defined as mandated by the requests library: https://requests.readthedocs.io/en/latest/user/advanced/#proxies
+            self.s.proxies.update(proxies)
 
         if api_key is not None:
             self.s.headers.update({

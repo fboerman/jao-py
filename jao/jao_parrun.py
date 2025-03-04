@@ -5,8 +5,8 @@ from typing import List, Dict
 
 
 class JaoPublicationToolPandasIntraDayParRun(JaoPublicationToolPandasClient):
-    def __init__(self, version):
-        super().__init__()
+    def __init__(self, version, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         if version == 'c':
             self.BASEURL = "https://parallelrun-publicationtool.jao.eu/coreID/api/data/IDCCC_"
         else:
