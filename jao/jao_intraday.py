@@ -7,6 +7,7 @@ from typing import List, Dict
 class JaoPublicationToolPandasIntraDay(JaoPublicationToolPandasClient):
     def __init__(self, version, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.version = version
         if version == 'a':
             self.BASEURL = "https://publicationtool.jao.eu/coreID/api/data/IDCCA_"
         elif version == 'b':
@@ -59,3 +60,10 @@ class JaoPublicationToolPandasIntraDay(JaoPublicationToolPandasClient):
             df = df[[c for c in df.columns if c.split('>')[1] == to_zone]]
 
         return df
+
+    def query_fallbacks(self, day: pd.Timestamp) -> pd.DataFrame:
+        if self.version == 'a':
+            raise NotImplementedError
+        return parse_base_output(
+            self._query_base_day(day, 'fallbacks')
+        ).drop(columns=['lastModifiedOn'])
