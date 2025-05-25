@@ -2,6 +2,7 @@ from .jao import JaoPublicationToolPandasClient
 import pandas as pd
 from .parsers import parse_final_domain
 
+
 class JaoPublicationToolPandasNordics(JaoPublicationToolPandasClient):
     BASEURL = "https://publicationtool.jao.eu/nordic/api/data/"
 

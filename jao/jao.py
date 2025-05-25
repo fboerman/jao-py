@@ -9,7 +9,7 @@ from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.5.6"
+__version__ = "0.5.7"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -44,14 +44,13 @@ class JaoPublicationToolClient:
 
     def _query_domain(self, url: str, mtu: pd.Timestamp, presolved: bool = None, cne: str = None, co: str = None,
                            urls_only: bool = False):
-        if cne is not None or co is not None or bool is not None:
-            filter = {
-                'CnecName': "" if cne is None else cne,
-                'Contingency': "" if co is None else co,
-                'Presolved': presolved
-            }
-        else:
-            filter = None
+        filter = {}
+        if cne is not None:
+            filter['CnecName'] = cne
+        if co is not None:
+            filter['Contingency'] = co
+        if presolved is not None:
+            filter['NonRedundant' if self.NORDIC else 'Presolved'] = presolved
 
         # first do a call with zero retrieved data to know how much data is available, then pull all at once
         r = self.s.get(self.BASEURL + url, params={

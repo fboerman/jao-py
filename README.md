@@ -19,14 +19,16 @@ supply a pull request yourself.
 ### Current clients
 The package comes with the current pandas clients:
 - [`JaoAPIClient`](#JaoAPIClient): api client for the webservice API defined [here](https://www.jao.eu/page-api/market-data)
-- [`JaoPublicationToolClient`](#JaoPublicationToolClient): client for the CORE Day Ahead publication tool defined [here](https://publicationtool.jao.eu/core/)
-- [`JaoPublicationToolPandasIntraDay`](#JaoPublicationToolPandasIntraDay): client for CORE Intradaypublication tool for Intraday defined [here](https://publicationtool.jao.eu/coreID/)
+- [`JaoPublicationToolClient`](#JaoPublicationToolClient): client for the Core Day-Ahead publication tool defined [here](https://publicationtool.jao.eu/core/)
+- [`JaoPublicationToolPandasIntraDay`](#JaoPublicationToolPandasIntraDay): client for Core Intradaypublication tool for Intraday defined [here](https://publicationtool.jao.eu/coreID/)
+- [`JaoPublicationToolPandasNordics`](#JaoPublicationToolPandasNordics): client for Nordic Day-Ahead publication tool defined [here](https://publicationtool.jao.eu/nordic/)
 The publication tool clients have valid data from their respective go lives:
-- CORE Day Ahead: business day 2022-06-09 onwards
-- CORE Intraday(b): business day 2024-05-29 onwards
-- CORE Intraday(a): business day 2024-06-14 onwards
+- Core Day-Ahead: business day 2022-06-09 onwards
+- Core Intraday(b): business day 2024-05-29 onwards
+- Core Intraday(a): business day 2024-06-14 onwards
+- Nordic Day-Ahead: business day 2024-10-30 onwards
 
-CORE Intraday a and b are combined in the same intraday client. In the initialization of the client you can choose which one you want like so:
+Core Intraday a and b are combined in the same intraday client. In the initialization of the client you can choose which one you want like so:
 ```python
 from jao import JaoPublicationToolPandasIntraDay
 
