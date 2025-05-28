@@ -5,7 +5,6 @@ from multiprocessing import Pool
 import itertools
 from .exceptions import NoMatchingDataError
 from .parsers import parse_final_domain, parse_base_output, parse_monitoring
-from typing import List, Dict
 from .util import to_snake_case
 
 __title__ = "jao-py"
@@ -39,8 +38,7 @@ class JaoPublicationToolClient:
         r.raise_for_status()
         if keyname is not None:
             return r.json()[keyname]
-        else:
-            return r.json()
+        return r.json()
 
     def _query_domain(self, url: str, mtu: pd.Timestamp, presolved: bool = None, cne: str = None, co: str = None,
                            urls_only: bool = False):
@@ -89,8 +87,8 @@ class JaoPublicationToolClient:
         return list(itertools.chain(*results))
 
     def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None, co: str = None,
-                           urls_only: bool = False) -> List[Dict]:
-        if type(mtu) != pd.Timestamp:
+                           urls_only: bool = False) -> list[dict]:
+        if not isinstance(mtu, pd.Timestamp):
             raise Exception('Please use a timezoned pandas Timestamp object for mtu')
         if mtu.tzinfo is None:
             raise Exception('Please use a timezoned pandas Timestamp object for mtu')
@@ -99,8 +97,8 @@ class JaoPublicationToolClient:
         return self._query_domain('finalComputation', mtu=mtu, presolved=presolved, cne=cne, co=co, urls_only=urls_only)
 
     def query_initial_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None, co: str = None,
-                           urls_only: bool = False) -> List[Dict]:
-        if type(mtu) != pd.Timestamp:
+                           urls_only: bool = False) -> list[dict]:
+        if not isinstance(mtu, pd.Timestamp):
             raise Exception('Please use a timezoned pandas Timestamp object for mtu')
         if mtu.tzinfo is None:
             raise Exception('Please use a timezoned pandas Timestamp object for mtu')
@@ -109,7 +107,7 @@ class JaoPublicationToolClient:
         return self._query_domain('initialComputation', mtu=mtu, presolved=presolved, cne=cne, co=co, urls_only=urls_only)
 
 
-    def _query_base_fromto(self, d_from: pd.Timestamp, d_to: pd.Timestamp, type: str) -> List[Dict]:
+    def _query_base_fromto(self, d_from: pd.Timestamp, d_to: pd.Timestamp, type: str) -> list[dict]:
         if type in ['monitoring']:
             url = self.BASEURL.replace('/data/', '/system/')
         else:
@@ -124,7 +122,7 @@ class JaoPublicationToolClient:
             raise NoMatchingDataError
         return data
 
-    def _query_base_day(self, day: pd.Timestamp, type: str) -> List[Dict]:
+    def _query_base_day(self, day: pd.Timestamp, type: str) -> list[dict]:
         d_from = day.replace(hour=0, minute=0)
         d_to = day.replace(hour=0, minute=0) + pd.Timedelta(days=1)
         # the api does some funny stuff on dst days, so adjust the to for this edge case
@@ -138,13 +136,13 @@ class JaoPublicationToolClient:
             type=type
         )
 
-    def query_net_position(self, day: pd.Timestamp) -> List[Dict]:
+    def query_net_position(self, day: pd.Timestamp) -> list[dict]:
         return self._query_base_day(
             day=day,
             type='netPos'
         )
 
-    def query_active_constraints(self, day: pd.Timestamp) -> List[Dict]:
+    def query_active_constraints(self, day: pd.Timestamp) -> list[dict]:
         # although the same skip/take mechanism is active on this endpoint as the final domain, this is not needed to be used
         #   by definition active constraints are only a few so its overkill to start pagination
         # for the same reason this endpoint returns a whole day at once instead of per hour since there are not many
@@ -156,37 +154,37 @@ class JaoPublicationToolClient:
             type='shadowPrices'
         )
 
-    def query_lta(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
+    def query_lta(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> list[dict]:
         return self._query_base_fromto(d_from, d_to, 'lta')
 
-    def query_validations(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
+    def query_validations(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> list[dict]:
         return self._query_base_fromto(d_from, d_to, 'validationReductions')
 
-    def query_maxbex(self, day: pd.Timestamp) -> List[Dict]:
+    def query_maxbex(self, day: pd.Timestamp) -> list[dict]:
         return self._query_base_day(day, 'maxExchanges')
 
-    def query_minmax_np(self, day: pd.Timestamp) -> List[Dict]:
+    def query_minmax_np(self, day: pd.Timestamp) -> list[dict]:
         return self._query_base_day(day, 'maxNetPos')
 
-    def query_allocationconstraint(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
+    def query_allocationconstraint(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> list[dict]:
         return self._query_base_fromto(d_from, d_to, 'allocationConstraint')
 
-    def query_status(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
+    def query_status(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> list[dict]:
         return self._query_base_fromto(d_from, d_to, 'spanningDefaultFBP')
 
-    def query_price_spread(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
+    def query_price_spread(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> list[dict]:
         return self._query_base_fromto(d_from, d_to, 'priceSpread')
 
-    def query_scheduled_exchange(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
+    def query_scheduled_exchange(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> list[dict]:
         return self._query_base_fromto(d_from, d_to, 'scheduledExchanges')
 
-    def query_alpha_factor(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
+    def query_alpha_factor(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> list[dict]:
         return self._query_base_fromto(d_from, d_to, 'alphaFactor')
 
-    def query_monitoring(self, day: pd.Timestamp) -> List[Dict]:
+    def query_monitoring(self, day: pd.Timestamp) -> list[dict]:
         return self._query_base_day(day, 'monitoring')
 
-    def query_d2cf(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> List[Dict]:
+    def query_d2cf(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> list[dict]:
         return self._query_base_fromto(
             d_from=d_from, d_to=d_to,
             type='d2CF' if not self.NORDIC else 'cgmForeCast'
@@ -248,10 +246,9 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
         )
 
     def query_validations(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
-        df = parse_base_output(
+        return parse_base_output(
             super().query_validations(d_from=d_from, d_to=d_to)
         ).rename(columns=to_snake_case)
-        return df
 
     def query_status(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
         return parse_base_output(

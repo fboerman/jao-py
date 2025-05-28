@@ -90,8 +90,8 @@ class JaoUtilityToolCSVClient:
         """
         d_from = pd.Timestamp(d_from)
         d_to = pd.Timestamp(d_to)
-        url = f"https://utilitytool.jao.eu/WebServiceV2.asmx/GetNetPositionDataForAPeriod?" \
-              f"dateFrom={d_from.strftime('%m-%d-%Y')}&dateTo={d_to.strftime('%m-%d-%Y')}"
+        url = (f"https://utilitytool.jao.eu/WebServiceV2.asmx/GetNetPositionDataForAPeriod?"
+              f"dateFrom={d_from.strftime('%m-%d-%Y')}&dateTo={d_to.strftime('%m-%d-%Y')}")
         r = self.s.get(url)
         r.raise_for_status()
 
@@ -100,9 +100,9 @@ class JaoUtilityToolCSVClient:
     def query_cwe_minmax_NP(self, d_from: str, d_to: str) -> pd.DataFrame:
         d_from = pd.Timestamp(d_from)
         d_to = pd.Timestamp(d_to)
-        url = f"https://utilitytool.jao.eu/WebServiceV2.asmx/GetTradingDataForAPeriod?" \
-              f"dateFrom={d_from.strftime('%m-%d-%Y')}&dateTo={d_to.strftime('%m-%d-%Y')}" \
-              f"&maxExchange=false&netPosition=true&ptdf=false"
+        url = (f"https://utilitytool.jao.eu/WebServiceV2.asmx/GetTradingDataForAPeriod?"
+              f"dateFrom={d_from.strftime('%m-%d-%Y')}&dateTo={d_to.strftime('%m-%d-%Y')}"
+              f"&maxExchange=false&netPosition=true&ptdf=false")
         r = self.s.get(url)
         r.raise_for_status()
 
@@ -140,18 +140,20 @@ class JaoUtilityToolCSVClient:
             def _shift_hour(row):
                 if row['Period'] < 4: # before clock change
                     return row['DeliveryDate'].replace(hour=row['Period'] - 1)
-                elif row['Period'] == 4: # during clock change
+                if row['Period'] == 4: # during clock change
                     return np.nan
-                elif row['Period'] > 4: # after clock change
+                if row['Period'] > 4: # after clock change
                     return row['DeliveryDate'].replace(hour=row['Period'] - 2)
+                return None
             df['DeliveryDate'] = df.apply(_shift_hour, axis=1)
         elif df['Period'].max() < 24:
             # clock going forward so one hour less
             def _shift_hour(row):
                 if row['Period'] < 3: # before clock change
                     return row['DeliveryDate'].replace(hour=row['Period'] - 1)
-                elif row['Period'] >= 3: # after clock change
+                if row['Period'] >= 3: # after clock change
                     return row['DeliveryDate'].replace(hour=row['Period'])
+                return None
             df['DeliveryDate'] = df.apply(_shift_hour, axis=1)
         else:
             # normal time
@@ -161,7 +163,7 @@ class JaoUtilityToolCSVClient:
         df = df.tz_localize('Europe/Amsterdam', ambiguous=True)
 
         # now do some cleanup, remove useless columns and make the ptdf columns more efficient
-        df.drop(columns=['FileId', 'Row'], inplace=True)
+        df = df.drop(columns=['FileId', 'Row'])
         # for ptdf columns we assume the jao system that the same bidding zone is mentioned in whole column
         # so only check first entry
         ptdf_translation = {}
@@ -182,15 +184,13 @@ class JaoUtilityToolCSVClient:
             i += 1
         df = df.rename(columns=ptdf_translation)
         df = df.drop(columns=useless_columns)
-        df = df.rename(columns={
+        return df.rename(columns={
                 'OutageName': 'CO',
                 'OutageEIC': 'CO_EIC',
                 'CriticalBranchName': 'CNE',
                 'CriticalBranchEIC': 'CNE_EIC',
                 'RemainingAvailableMargin': 'RAM'
             })
-
-        return df
 
     def query_final_flowbased_domain(self, d: str) -> pd.DataFrame:
         """
@@ -203,8 +203,8 @@ class JaoUtilityToolCSVClient:
         d = pd.Timestamp(d)
 
         # retrieve the data from jao network call
-        url = f"https://utilitytool.jao.eu/CSV/GetAllCBCOFixedLabelDataForAPeriod?dateFrom={d.strftime('%m-%d-%Y')}&" \
-              f"dateTo={d.strftime('%m-%d-%Y')}&random=1"
+        url = (f"https://utilitytool.jao.eu/CSV/GetAllCBCOFixedLabelDataForAPeriod?dateFrom={d.strftime('%m-%d-%Y')}&"
+              f"dateTo={d.strftime('%m-%d-%Y')}&random=1")
         r = self.s.get(url)
         # check for http errors
         r.raise_for_status()
@@ -220,9 +220,9 @@ class JaoUtilityToolCSVClient:
         d = pd.Timestamp(d)
 
         # retrieve the data from jao network call
-        url = f"https://utilitytool.jao.eu/CSV/GetVirginDomainInitialComputationDataForAPeriod?"\
-              f"dateFrom={d.strftime('%m-%d-%Y')}&" \
-              f"dateTo={d.strftime('%m-%d-%Y')}&random=1"
+        url = (f"https://utilitytool.jao.eu/CSV/GetVirginDomainInitialComputationDataForAPeriod?"
+              f"dateFrom={d.strftime('%m-%d-%Y')}&"
+              f"dateTo={d.strftime('%m-%d-%Y')}&random=1")
         r = self.s.get(url)
         # check for http errors
         r.raise_for_status()
@@ -238,9 +238,9 @@ class JaoUtilityToolCSVClient:
         d = pd.Timestamp(d)
 
         # retrieve the data from jao network call
-        url = f"https://utilitytool.jao.eu/CSV/GetVirginDomainFinalComputationDataForAPeriod?"\
-              f"dateFrom={d.strftime('%m-%d-%Y')}&" \
-              f"dateTo={d.strftime('%m-%d-%Y')}&random=1"
+        url = (f"https://utilitytool.jao.eu/CSV/GetVirginDomainFinalComputationDataForAPeriod?"
+              f"dateFrom={d.strftime('%m-%d-%Y')}&"
+              f"dateTo={d.strftime('%m-%d-%Y')}&random=1")
         r = self.s.get(url)
         # check for http errors
         r.raise_for_status()

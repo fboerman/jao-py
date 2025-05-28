@@ -3,7 +3,6 @@ import pandas as pd
 from datetime import timedelta, date
 from calendar import monthrange
 from dateutil.relativedelta import relativedelta
-from typing import Union
 
 
 class JaoAPIClient:
@@ -70,7 +69,7 @@ class JaoAPIClient:
 
         return data
 
-    def query_auction_bids_by_month(self, corridor: str, month: date, as_dict: bool = False) -> Union[pd.DataFrame, dict]:
+    def query_auction_bids_by_month(self, corridor: str, month: date, as_dict: bool = False) -> pd.DataFrame | dict:
         """
         wrapper function to construct the auction id since its predictable and
           pass it on to the query function for the bids
@@ -83,7 +82,7 @@ class JaoAPIClient:
 
         return self.query_auction_bids_by_id(month.strftime(f"{corridor}-M-BASE-------%y%m01-01"), as_dict=as_dict)
 
-    def query_curtailments_by_month(self, corridor: str, month: date, as_dict: bool = False) -> Union[pd.DataFrame, list]:
+    def query_curtailments_by_month(self, corridor: str, month: date, as_dict: bool = False) -> pd.DataFrame | list:
         month_begin = month.replace(day=1)
         month_end = month.replace(day=monthrange(month.year, month.month)[1])
         r = self.s.get(self.BASEURL + 'getcurtailment', params={
@@ -95,15 +94,14 @@ class JaoAPIClient:
         r.raise_for_status()
         if as_dict:
             return r.json()
-        else:
-            df = pd.DataFrame(r.json())
-            df['curtailmentPeriodStart'] = pd.to_datetime(df['curtailmentPeriodStart'])\
-                    .dt.tz_convert('europe/amsterdam')
-            df['curtailmentPeriodStop'] = pd.to_datetime(df['curtailmentPeriodStop'])\
-                    .dt.tz_convert('europe/amsterdam')
-            return df
+        df = pd.DataFrame(r.json())
+        df['curtailmentPeriodStart'] = pd.to_datetime(df['curtailmentPeriodStart'])\
+                .dt.tz_convert('europe/amsterdam')
+        df['curtailmentPeriodStop'] = pd.to_datetime(df['curtailmentPeriodStop'])\
+                .dt.tz_convert('europe/amsterdam')
+        return df
 
-    def query_auction_bids_by_id(self, auction_id: str, as_dict: bool = False) -> Union[pd.DataFrame, list]:
+    def query_auction_bids_by_id(self, auction_id: str, as_dict: bool = False) -> pd.DataFrame | list:
         r = self.s.get(self.BASEURL + "getbids", params={
             'auctionid': auction_id
         })
@@ -112,8 +110,7 @@ class JaoAPIClient:
 
         if as_dict:
             return r.json()
-        else:
-            return pd.DataFrame(r.json())
+        return pd.DataFrame(r.json())
 
     def query_auction_stats_months(self, month_from: date, month_to: date, corridor: str, horizon: str = 'Monthly') -> pd.DataFrame:
         """
@@ -154,7 +151,7 @@ class JaoAPIClient:
             data.append(m_data)
             m += relativedelta(months=1)
         df = pd.DataFrame(data)
-        df['resoldCapacity'].fillna(0, inplace=True)
+        df = df['resoldCapacity'].fillna(0)
         df['nonAllocatedCapacity'] = df['offeredCapacity'] - df['allocatedCapacity']
 
         return df

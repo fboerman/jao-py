@@ -2,7 +2,6 @@ import pandas as pd
 from lxml import etree
 from datetime import datetime
 from .definitions import ParseDataSubject
-from typing import Union
 
 
 def _infer_and_convert_type(s):
@@ -12,7 +11,7 @@ def _infer_and_convert_type(s):
         # no valid index so whole thing is nan. simply return as float nan type
         return s.astype(float)
 
-    if type(v) != str:
+    if not isinstance(v, str):
         return s
     t = None
     try:
@@ -33,7 +32,7 @@ def _infer_and_convert_type(s):
     return s.fillna('')
 
 
-def _parse_utility_tool_xml(xml: Union[bytes, str], t: ParseDataSubject) -> pd.DataFrame:
+def _parse_utility_tool_xml(xml: bytes | str, t: ParseDataSubject) -> pd.DataFrame:
     """
     parses the xml coming out of the utility tool
 
@@ -41,9 +40,9 @@ def _parse_utility_tool_xml(xml: Union[bytes, str], t: ParseDataSubject) -> pd.D
     :param t: which type to parse, choose from "MaxExchanges", "MaxNetPositions", "Ptdfs"
     :return:
     """
-    if type(xml) == str:
+    if isinstance(xml, str):
         xml_b = xml.encode('UTF-8')
-    elif type(xml) == bytes:
+    elif isinstance(xml, bytes):
         xml_b = xml
     else:
         raise ValueError("xml should be provided in either bytes or string format")
@@ -67,12 +66,10 @@ def _parse_utility_tool_xml(xml: Union[bytes, str], t: ParseDataSubject) -> pd.D
 
     df['TIMESTAMP_CET'] = df.apply(lambda row: datetime.strptime(row['Date'], '%Y-%m-%dT00:00:00').replace(hour=int(row['CalendarHour'])-1), axis=1)
 
-    df.drop(columns=['Date', 'CalendarHour'], inplace=True)
-
-    return df
+    return df.drop(columns=['Date', 'CalendarHour'])
 
 
-def _parse_utilitytool_xml(xml: Union[bytes, str], nodename: str, columnnames: list, datenode: str,
+def _parse_utilitytool_xml(xml: bytes | str, nodename: str, columnnames: list, datenode: str,
                            xpath: str='') -> pd.DataFrame:
     """
     parses the xml coming out excell utilitytool endpoints which is xml
@@ -81,9 +78,9 @@ def _parse_utilitytool_xml(xml: Union[bytes, str], nodename: str, columnnames: l
     :return:
     """
 
-    if type(xml) == str:
+    if isinstance(xml, str):
         xml_b = xml.encode('UTF-8')
-    elif type(xml) == bytes:
+    elif isinstance(xml, bytes):
         xml_b = xml
     else:
         raise ValueError("xml should be provided in either bytes or string format")
@@ -106,10 +103,8 @@ def _parse_utilitytool_xml(xml: Union[bytes, str], nodename: str, columnnames: l
     df['timestamp'] = df.apply(
         lambda row: datetime.strptime(row['date'], '%Y-%m-%dT00:00:00').replace(hour=int(row['hour']) - 1),
         axis=1)
-    df.drop(columns=['date', 'hour'], inplace=True)
-    df = df.set_index('timestamp').tz_localize('europe/amsterdam')
-
-    return df
+    df = df.drop(columns=['date', 'hour'])
+    return df.set_index('timestamp').tz_localize('europe/amsterdam')
 
 
 def _parse_maczt_final_flowbased_domain(df: pd.DataFrame, zone='NL') -> pd.DataFrame:
@@ -151,7 +146,7 @@ def _parse_maczt_final_flowbased_domain(df: pd.DataFrame, zone='NL') -> pd.DataF
     df['MACZT_MIN_PCT'] = df['MACZT_TARGET_PCT'] - df['LF_SUB_PCT']
     df['MACZT_MARGIN'] = df['MACZT_PCT'] - df['MACZT_MIN_PCT']
 
-    df.drop(columns=['MinRAMFactorJustification'], inplace=True)
+    df = df.drop(columns=['MinRAMFactorJustification'])
 
     # there is only two decimals statistical relevance here so round it at that
     df[['MCCC_PCT', 'MACZT_PCT', 'LF_SUB_PCT', 'MACZT_MIN_PCT', 'MACZT_MARGIN']] = df[['MCCC_PCT', 'MACZT_PCT', 'LF_SUB_PCT', 'MACZT_MIN_PCT', 'MACZT_MARGIN']].round(2)
@@ -167,7 +162,7 @@ def _parse_suds_tradingdata(data, subject: str, nested: bool = False, freq: str 
     :param freq: timefrequency for
     :return: resulting pandas dataframe
     """
-    data_parsed = []
+
     if nested:
         data_raw = data[subject][subject.strip('s')]
     else:
@@ -179,5 +174,4 @@ def _parse_suds_tradingdata(data, subject: str, nested: bool = False, freq: str 
     df.index = pd.date_range(df[date_column].min(),
                              df[date_column].max().replace(hour=23),
                              freq=freq, tz='Europe/Amsterdam')
-    df.drop(columns=[date_column, 'CalendarHour'], inplace=True)
-    return df.astype(float)
+    return df.drop(columns=[date_column, 'CalendarHour']).astype(float)

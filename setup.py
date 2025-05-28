@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 """
 A setuptools based setup module for jao-py
@@ -20,9 +19,9 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 # Get the version from the source code
 with open(path.join(here, 'jao', 'jao.py'), encoding='utf-8') as f:
     lines = f.readlines()
-    for l in lines:
-        if l.startswith('__version__'):
-            __version__ = l.split('"')[1]
+    for line in lines:
+        if line.startswith('__version__'):
+            __version__ = line.split('"')[1]
 
 setup(
     name='jao-py',

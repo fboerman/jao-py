@@ -1,7 +1,6 @@
 from .jao import JaoPublicationToolPandasClient
 import pandas as pd
 from .parsers import parse_base_output
-from typing import List, Dict
 
 
 class JaoPublicationToolPandasIntraDay(JaoPublicationToolPandasClient):
@@ -27,7 +26,7 @@ class JaoPublicationToolPandasIntraDay(JaoPublicationToolPandasClient):
     def query_alpha_factor(self, d_from: pd.Timestamp, d_to: pd.Timestamp):
         raise NotImplementedError
 
-    def query_monitoring(self, day: pd.Timestamp) -> List[Dict]:
+    def query_monitoring(self, day: pd.Timestamp) -> list[dict]:
         # use this quick hack because this monitoring endpoint differs from all others
         base_url_old = self.BASEURL
         self.BASEURL = self.BASEURL.replace("IDCCA_", '').replace("IDCCB_", '')

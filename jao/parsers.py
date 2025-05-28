@@ -1,9 +1,8 @@
 import pandas as pd
 from .util import to_snake_case
-from typing import List, Dict
 
 
-def parse_final_domain(data: List[Dict]) -> pd.DataFrame:
+def parse_final_domain(data: list[dict]) -> pd.DataFrame:
     # flatten the data
     # note: this only selects first CO
     # save the order of keys to keep output consistent
@@ -30,23 +29,20 @@ def parse_final_domain(data: List[Dict]) -> pd.DataFrame:
     df = df.rename(columns={'id': 'id_original'})
     # parse datetime, convert to localtime and adjust column name
     df['date_time_utc'] = pd.to_datetime(df['date_time_utc'], utc=True).dt.tz_convert('europe/amsterdam')
-    df = df.rename(columns={'date_time_utc': 'mtu'})
-    # return the result!
-    return df
+    return df.rename(columns={'date_time_utc': 'mtu'})
 
 
-def parse_monitoring(data: List[Dict]) -> pd.DataFrame:
+def parse_monitoring(data: list[dict]) -> pd.DataFrame:
     df = pd.DataFrame(data)
     if 'businessDayUtc' in df:
         df['businessDay'] = pd.to_datetime(df['businessDayUtc'], utc=True).dt.tz_convert('europe/amsterdam').dt.date
         df = df.drop(columns=['businessDayUtc'])
     for c in ['deadline', 'lastModifiedOn']:
         df[c] = pd.to_datetime(df[c], utc=True).dt.tz_convert('europe/amsterdam')
-    df=df.drop(columns=['id'])
-    return df
+    return df.drop(columns=['id'])
 
 
-def parse_base_output(data: List[Dict]) -> pd.DataFrame:
+def parse_base_output(data: list[dict]) -> pd.DataFrame:
     df = pd.DataFrame(data).drop(columns='id')
     df['dateTimeUtc'] = pd.to_datetime(df['dateTimeUtc'], utc=True).dt.tz_convert('europe/amsterdam')
     df = df.set_index('dateTimeUtc')
