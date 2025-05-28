@@ -17,6 +17,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+      - name: Run formatting checks
+        run: ruff check
       - name: Install pypa/build
         run: >-
           python -m
