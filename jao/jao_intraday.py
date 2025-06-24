@@ -11,6 +11,8 @@ class JaoPublicationToolPandasIntraDay(JaoPublicationToolPandasClient):
             self.BASEURL = "https://publicationtool.jao.eu/coreID/api/data/IDCCA_"
         elif version == 'b':
             self.BASEURL = "https://publicationtool.jao.eu/coreID/api/data/IDCCB_"
+        elif version == 'c':
+            self.BASEURL = "https://publicationtool.jao.eu/coreID/api/data/IDCCC_"
         else:
             raise NotImplementedError
 

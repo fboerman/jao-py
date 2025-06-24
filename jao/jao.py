@@ -8,7 +8,7 @@ from .parsers import parse_final_domain, parse_base_output, parse_monitoring
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.5.7"
+__version__ = "0.5.8"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 

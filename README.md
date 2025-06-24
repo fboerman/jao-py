@@ -34,6 +34,7 @@ from jao import JaoPublicationToolPandasIntraDay
 
 client = JaoPublicationToolPandasIntraDay(version='a') # IDCC(a)
 client = JaoPublicationToolPandasIntraDay(version='b') # IDCC(b)
+client = JaoPublicationToolPandasIntraDay(version='c') # IDCC(c)
 ```
 
 There is also a client available for parallel run, which works in the exact same way as the intraday client above:

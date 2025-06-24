@@ -1,6 +1,7 @@
 from .jao import JaoPublicationToolPandasClient
 import pandas as pd
 from .parsers import parse_base_output
+import warnings
 
 
 class JaoPublicationToolPandasIntraDayParRun(JaoPublicationToolPandasClient):
@@ -8,6 +9,7 @@ class JaoPublicationToolPandasIntraDayParRun(JaoPublicationToolPandasClient):
         super().__init__(*args, **kwargs)
         if version == 'c':
             self.BASEURL = "https://parallelrun-publicationtool.jao.eu/coreID/api/data/IDCCC_"
+            warnings.warn("Parallel run of IDCC(c) is over, for production data use the normal client", DeprecationWarning)
         else:
             raise NotImplementedError
 
