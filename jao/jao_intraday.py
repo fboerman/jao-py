@@ -68,3 +68,11 @@ class JaoPublicationToolPandasIntraDay(JaoPublicationToolPandasClient):
         return parse_base_output(
             self._query_base_day(day, 'fallbacks')
         ).drop(columns=['lastModifiedOn'])
+
+
+    def query_validations_atc(self, day: pd.Timestamp) -> pd.DataFrame:
+        if self.version == 'a':
+            raise NotImplementedError
+        return parse_base_output(
+            self._query_base_day(day, 'validationReductionsATCs')
+        )
