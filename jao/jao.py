@@ -8,7 +8,7 @@ from .parsers import parse_final_domain, parse_base_output, parse_monitoring
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.5.9"
+__version__ = "0.5.10"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -246,9 +246,14 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
         )
 
     def query_validations(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
-        return parse_base_output(
+        df = parse_base_output(
             super().query_validations(d_from=d_from, d_to=d_to)
         ).rename(columns=to_snake_case)
+        # sometimes JAO returns some strange data, probably because its still loading, filter that out here
+        df = df[~df['tso'].str.contains('CBCO')]
+        if len(df) == 0:
+            raise NoMatchingDataError
+        return df
 
     def query_status(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
         return parse_base_output(
