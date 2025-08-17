@@ -8,7 +8,7 @@ from .parsers import parse_final_domain, parse_base_output, parse_monitoring
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.5.10"
+__version__ = "0.5.11"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -113,8 +113,8 @@ class JaoPublicationToolClient:
         else:
             url = self.BASEURL
         r = self.s.get(url + type, params={
-            'FromUTC': d_from.isoformat(),
-            'ToUTC': d_to.isoformat()
+            'FromUTC': d_from.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z'),
+            'ToUTC': d_to.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z')
         })
         r.raise_for_status()
         data = r.json()['data']
@@ -126,10 +126,12 @@ class JaoPublicationToolClient:
         d_from = day.replace(hour=0, minute=0)
         d_to = day.replace(hour=0, minute=0) + pd.Timedelta(days=1)
         # the api does some funny stuff on dst days, so adjust the to for this edge case
-        if d_from.dst() > d_to.dst():
-            d_to += pd.Timedelta(hours=1)
-        elif d_from.dst() < d_to.dst():
-            d_to -= pd.Timedelta(hours=1)
+        # exempt the monitoring page of this
+        if type != 'monitoring':
+            if d_from.dst() > d_to.dst():
+                d_to += pd.Timedelta(hours=1)
+            elif d_from.dst() < d_to.dst():
+                d_to -= pd.Timedelta(hours=1)
         return self._query_base_fromto(
             d_from=d_from,
             d_to=d_to,
