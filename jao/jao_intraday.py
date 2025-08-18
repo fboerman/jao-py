@@ -4,15 +4,17 @@ from .parsers import parse_base_output
 
 
 class JaoPublicationToolPandasIntraDay(JaoPublicationToolPandasClient):
+    BASEURL_BARE = "https://publicationtool.jao.eu/coreID/api/data/"
+
     def __init__(self, version, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.version = version
         if version == 'a':
-            self.BASEURL = "https://publicationtool.jao.eu/coreID/api/data/IDCCA_"
+            self.BASEURL = self.BASEURL_BARE + "IDCCA_"
         elif version == 'b':
-            self.BASEURL = "https://publicationtool.jao.eu/coreID/api/data/IDCCB_"
+            self.BASEURL = self.BASEURL_BARE + "IDCCB_"
         elif version == 'c':
-            self.BASEURL = "https://publicationtool.jao.eu/coreID/api/data/IDCCC_"
+            self.BASEURL = self.BASEURL_BARE + "IDCCC_"
         else:
             raise NotImplementedError
 
@@ -31,7 +33,7 @@ class JaoPublicationToolPandasIntraDay(JaoPublicationToolPandasClient):
     def query_monitoring(self, day: pd.Timestamp) -> list[dict]:
         # use this quick hack because this monitoring endpoint differs from all others
         base_url_old = self.BASEURL
-        self.BASEURL = self.BASEURL.replace("IDCCA_", '').replace("IDCCB_", '')
+        self.BASEURL = self.BASEURL_BARE
         data = self._query_base_day(day, 'monitoring')
         self.BASEURL = base_url_old
         return data
