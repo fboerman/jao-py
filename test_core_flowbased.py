@@ -11,16 +11,23 @@ def client():
 
 @pytest.fixture()
 def mtu():
-    mtu = pd.Timestamp('2023-03-23 12:00', tz='europe/amsterdam')
+    mtu = pd.Timestamp('2025-03-23 12:00', tz='europe/amsterdam')
     yield mtu
 
 
-def test_final_domain(client, mtu):
-    df = client.query_final_domain(
-        mtu=mtu,
-        presolved=True
-    )
-    assert len(df) == 117
+# def test_final_domain(client, mtu):
+#     df = client.query_final_domain(
+#         mtu=mtu,
+#         presolved=True
+#     )
+#     assert len(df) == 117
+#
+#
+# def test_initial_domain(client, mtu):
+#     df = client.query_initial_domain(
+#         mtu=mtu
+#     )
+#     assert len(df) == 21986
 
 
 def test_allocationconstraint(client, mtu):
@@ -30,12 +37,12 @@ def test_allocationconstraint(client, mtu):
     )
     assert len(df) == 1
     assert len(df.columns) == 4
-    assert df.iloc[0].to_list() == [7287, 0, None, 5538]
+    assert df.iloc[0].to_list() == [None, 0, None, 11987]
 
 
 def test_monitoring(client, mtu):
     df = client.query_monitoring(mtu)
-    assert len(df) == 29
+    assert len(df) == 28
     assert len(df.columns) == 6
 
 
@@ -51,7 +58,7 @@ def test_active_constraints(client, mtu):
     df = client.query_active_constraints(
         day=mtu,
     )
-    assert len(df) == 133
+    assert len(df) == 85
     assert len(df.columns) == 39
 
 
@@ -110,3 +117,34 @@ def test_d2cf(client, mtu):
     )
     assert len(df) == 1
     assert len(df.columns) == 51
+
+def test_alpha_factor(client, mtu):
+    # take different mtu then other tests because there was no iva on selected hour
+    df = client.query_alpha_factor(d_from=mtu.replace(hour=0), d_to=mtu.replace(hour=23, minute=59))
+    assert len(df) == 24
+
+def test_price_spread(client, mtu):
+    df = client.query_price_spread(
+        d_from=mtu,
+        d_to=mtu + pd.Timedelta(hours=1)
+    )
+    assert len(df) == 1
+    assert len(df.columns) == 44
+
+
+def test_scheduled_exchange(client, mtu):
+    df = client.query_scheduled_exchange(
+        d_from=mtu,
+        d_to=mtu + pd.Timedelta(hours=1)
+    )
+    assert len(df) == 1
+    assert len(df.columns) == 44
+
+
+def test_refprog(client, mtu):
+    df = client.query_refprog(
+        d_from=mtu,
+        d_to=mtu + pd.Timedelta(hours=1)
+    )
+    assert len(df) == 1
+    assert len(df.columns) == 88

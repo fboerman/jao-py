@@ -8,7 +8,7 @@ from .parsers import parse_final_domain, parse_base_output, parse_monitoring
 from .util import to_snake_case
 
 __title__ = "jao-py"
-__version__ = "0.5.11"
+__version__ = "0.5.12"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -192,6 +192,11 @@ class JaoPublicationToolClient:
             type='d2CF' if not self.NORDIC else 'cgmForeCast'
         )
 
+    def query_refprog(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> list[dict]:
+        return self._query_base_fromto(
+            d_from=d_from, d_to=d_to,
+            type='refprog'
+        )
 
 class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None,
@@ -267,7 +272,7 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
             super().query_alpha_factor(d_from=d_from, d_to=d_to)
         ).drop(columns=['lastModifiedOn'])
 
-    def query_price_spread(self, d_from: pd.Timestamp, datetime, d_to: pd.Timestamp) -> (
+    def query_price_spread(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> (
             pd.DataFrame):
         return parse_base_output(
             super().query_price_spread(d_from=d_from, d_to=d_to)
@@ -287,4 +292,9 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def query_d2cf(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
         return parse_base_output(
             super().query_d2cf(d_from=d_from, d_to=d_to)
+        )
+
+    def query_refprog(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
+        return parse_base_output(
+            super().query_refprog(d_from=d_from, d_to=d_to)
         )
