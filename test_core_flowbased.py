@@ -15,19 +15,27 @@ def mtu():
     yield mtu
 
 
-# def test_final_domain(client, mtu):
-#     df = client.query_final_domain(
-#         mtu=mtu,
-#         presolved=True
-#     )
-#     assert len(df) == 117
-#
-#
-# def test_initial_domain(client, mtu):
-#     df = client.query_initial_domain(
-#         mtu=mtu
-#     )
-#     assert len(df) == 21986
+def test_final_domain(client, mtu):
+    df = client.query_final_domain(
+        mtu=mtu,
+        presolved=True
+    )
+    assert len(df) == 123
+
+
+def test_prefinal_domain(client, mtu):
+    df = client.query_prefinal_domain(
+        mtu=mtu,
+        presolved=True
+    )
+    assert len(df) == 119
+
+
+def test_initial_domain(client, mtu):
+    df = client.query_initial_domain(
+        mtu=mtu
+    )
+    assert len(df) == 12430
 
 
 def test_allocationconstraint(client, mtu):
