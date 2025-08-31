@@ -20,12 +20,14 @@ supply a pull request yourself.
 The package comes with the current pandas clients:
 - [`JaoAPIClient`](#JaoAPIClient): api client for the webservice API defined [here](https://www.jao.eu/page-api/market-data)
 - [`JaoPublicationToolClient`](#JaoPublicationToolClient): client for the Core Day-Ahead publication tool defined [here](https://publicationtool.jao.eu/core/)
+- [`JaoPublicationToolPandasClient`](#JaoPublicationToolClient): Pandas client for the Core Day-Ahead publication tool defined [here](https://publicationtool.jao.eu/core/)
 - [`JaoPublicationToolPandasIntraDay`](#JaoPublicationToolPandasIntraDay): client for Core Intradaypublication tool for Intraday defined [here](https://publicationtool.jao.eu/coreID/)
 - [`JaoPublicationToolPandasNordics`](#JaoPublicationToolPandasNordics): client for Nordic Day-Ahead publication tool defined [here](https://publicationtool.jao.eu/nordic/)
 The publication tool clients have valid data from their respective go lives:
 - Core Day-Ahead: business day 2022-06-09 onwards
-- Core Intraday(b): business day 2024-05-29 onwards
 - Core Intraday(a): business day 2024-06-14 onwards
+- Core Intraday(b): business day 2024-05-29 onwards
+- Core Intraday(c): business day 2025-06-25 onwards
 - Nordic Day-Ahead: business day 2024-10-30 onwards
 
 Core Intraday a and b are combined in the same intraday client. In the initialization of the client you can choose which one you want like so:
@@ -37,12 +39,10 @@ client = JaoPublicationToolPandasIntraDay(version='b') # IDCC(b)
 client = JaoPublicationToolPandasIntraDay(version='c') # IDCC(c)
 ```
 
-There is also a client available for parallel run, which works in the exact same way as the intraday client above:
-```python
-from jao import JaoPublicationToolPandasIntraDayParRun
-
-client = JaoPublicationToolPandasIntraDayParRun('c') #IDCC(c)
-```
+### Experimental Features
+This package provides support for the experimental data mirror [mirror.flowbased.eu](https://mirror.flowbased.eu/). 
+This allows to download final and prefinal domain from the fast mirror. If the requested day is not available the package will fallback to the JAO publication tool.  
+To enable it either use ```use_mirror=True``` in the function call or set the environment variable ```JAO_USE_MIRROR=1```, by default this feature is off.
 
 ### Deprecated clients
 The package also includes legacy clients for flowbased CWE data in the CWE subpackage. These return data up until business day 2022-06-08

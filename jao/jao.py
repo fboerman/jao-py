@@ -6,9 +6,13 @@ import itertools
 from .exceptions import NoMatchingDataError
 from .parsers import parse_final_domain, parse_base_output, parse_monitoring
 from .util import to_snake_case
+from zipfile import ZipFile
+from io import BytesIO
+import os
+
 
 __title__ = "jao-py"
-__version__ = "0.5.13"
+__version__ = "0.5.14"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -32,6 +36,7 @@ class JaoPublicationToolClient:
             })
 
         self.NORDIC = 'nordic' in self.BASEURL
+        self.version = None # only for intraday
 
     def _starmap_pull(self, url, params, keyname=None):
         r = self.s.get(url, params=params)
@@ -209,14 +214,41 @@ class JaoPublicationToolClient:
         )
 
 class JaoPublicationToolPandasClient(JaoPublicationToolClient):
+    def _query_mirror(self, name: str, date: str) -> pd.DataFrame:
+        r = requests.get(f'https://mirror.flowbased.eu/dacc/{name}/{date}')
+        if r.status_code != 200:
+            return None
+
+        zf = ZipFile(BytesIO(r.content))
+        zf.namelist()
+        return pd.read_csv(zf.open(zf.namelist()[0]))
+
     def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None,
-                           co: str = None) -> pd.DataFrame:
+                           co: str = None, use_mirror: bool = False) -> pd.DataFrame:
+        """
+        when use_mirror (or JAO_USE_MIRROR=1 in env) is set the whole day is returned from mirror.flowbased.eu
+
+        """
+        if (use_mirror or os.environ.get('JAO_USE_MIRROR', '0') == '1') and self.version is None:
+            df = self._query_mirror(name='final_domain', date=mtu.strftime('%Y-%m-%d'))
+            if df is not None:
+                return df
+
         return parse_final_domain(
             super().query_final_domain(mtu=mtu, presolved=presolved, cne=cne, co=co)
         )
 
     def query_prefinal_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None,
-                           co: str = None) -> pd.DataFrame:
+                           co: str = None, use_mirror: bool = False) -> pd.DataFrame:
+        """
+        when use_mirror (or JAO_USE_MIRROR=1 in env) is set the whole day is returned from mirror.flowbased.eu
+
+        """
+        if (use_mirror or os.environ.get('JAO_USE_MIRROR', '0') == '1') and self.version is None:
+            df = self._query_mirror(name='prefinal_domain', date=mtu.strftime('%Y-%m-%d'))
+            if df is not None:
+                return df
+
         return parse_final_domain(
             super().query_prefinal_domain(mtu=mtu, presolved=presolved, cne=cne, co=co)
         )
