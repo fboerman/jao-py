@@ -12,7 +12,7 @@ import os
 
 
 __title__ = "jao-py"
-__version__ = "0.5.14"
+__version__ = "0.6.0"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -122,20 +122,31 @@ class JaoPublicationToolClient:
         return self._query_domain('initialComputation', mtu=mtu, presolved=presolved, cne=cne, co=co, urls_only=urls_only)
 
 
-    def _query_base_fromto(self, d_from: pd.Timestamp, d_to: pd.Timestamp, type: str) -> list[dict]:
+    def _query_base_fromto(self, d_from: pd.Timestamp, d_to: pd.Timestamp, type: str, split_days=True) -> list[dict]:
         if type in ['monitoring']:
             url = self.BASEURL.replace('/data/', '/system/')
         else:
             url = self.BASEURL
-        r = self.s.get(url + type, params={
-            'FromUTC': d_from.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z'),
-            'ToUTC': d_to.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z')
-        })
-        r.raise_for_status()
-        data = r.json()['data']
-        if len(data) == 0:
+        # align on SDAC/SIDC business days, so in timezone amsterdam
+        d_from = d_from.tz_convert('europe/amsterdam')
+        d_to = d_to.tz_convert('europe/amsterdam')
+        data_total = []
+        for day in pd.date_range(d_from.strftime('%Y-%m-%d'), d_to.strftime('%Y-%m-%d'), tz='europe/amsterdam'):
+            d_from_part = day
+            if d_from_part < d_from:
+                d_from_part = d_from
+            d_to_part = day+pd.Timedelta(days=1)-pd.Timedelta(minutes=1)
+            if d_to_part > d_to:
+                d_to_part = d_to
+            r = self.s.get(url + type, params={
+                'FromUTC': d_from_part.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z'),
+                'ToUTC': d_to_part.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z')
+            })
+            r.raise_for_status()
+            data_total += r.json()['data']
+        if len(data_total) == 0:
             raise NoMatchingDataError
-        return data
+        return data_total
 
     def _query_base_day(self, day: pd.Timestamp, type: str) -> list[dict]:
         d_from = day.replace(hour=0, minute=0)
@@ -150,7 +161,8 @@ class JaoPublicationToolClient:
         return self._query_base_fromto(
             d_from=d_from,
             d_to=d_to,
-            type=type
+            type=type,
+            split_days=False
         )
 
     def query_net_position(self, day: pd.Timestamp) -> list[dict]:
