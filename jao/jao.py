@@ -12,7 +12,7 @@ import os
 
 
 __title__ = "jao-py"
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -135,7 +135,9 @@ class JaoPublicationToolClient:
             d_from_part = day
             if d_from_part < d_from:
                 d_from_part = d_from
-            d_to_part = day+pd.Timedelta(days=1)-pd.Timedelta(minutes=1)
+            # for DST days, make sure we always query a full day by doing a string conversion trick
+            # looks a bit ugly, works great
+            d_to_part = pd.Timestamp((day+pd.Timedelta(days=1)).strftime('%Y-%m-%d 23:59'), tz='europe/amsterdam')
             if d_to_part > d_to:
                 d_to_part = d_to
             r = self.s.get(url + type, params={
@@ -150,14 +152,7 @@ class JaoPublicationToolClient:
 
     def _query_base_day(self, day: pd.Timestamp, type: str) -> list[dict]:
         d_from = day.replace(hour=0, minute=0)
-        d_to = day.replace(hour=0, minute=0) + pd.Timedelta(days=1)
-        # the api does some funny stuff on dst days, so adjust the to for this edge case
-        # exempt the monitoring page of this
-        if type != 'monitoring':
-            if d_from.dst() > d_to.dst():
-                d_to += pd.Timedelta(hours=1)
-            elif d_from.dst() < d_to.dst():
-                d_to -= pd.Timedelta(hours=1)
+        d_to = (d_from + pd.Timedelta('1D')).replace(hour=23, second=0, minute=59)
         return self._query_base_fromto(
             d_from=d_from,
             d_to=d_to,
