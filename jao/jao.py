@@ -152,7 +152,7 @@ class JaoPublicationToolClient:
 
     def _query_base_day(self, day: pd.Timestamp, type: str) -> list[dict]:
         d_from = day.replace(hour=0, minute=0)
-        d_to = (d_from + pd.Timedelta('1D')).replace(hour=23, second=0, minute=59)
+        d_to = day.replace(hour=23, minute=59)
         return self._query_base_fromto(
             d_from=d_from,
             d_to=d_to,
