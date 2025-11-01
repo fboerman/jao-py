@@ -39,6 +39,11 @@ client = JaoPublicationToolPandasIntraDay(version='b') # IDCC(b)
 client = JaoPublicationToolPandasIntraDay(version='c') # IDCC(c)
 ```
 
+### Rate Limiter
+JAO currently has a fixed rate limiting of 100 requests per minute, if you surpass this a HTTP 429 is returned.
+The library has a naive way of handling this by sleeping for ```RATE_LIMIT_HANDLER``` seconds, which is by default 30 seconds.  
+If you want to disable this set ```RATE_LIMIT_HANDLER``` to 0 through environment variables and the library will throw a HTTP exception that you can handle yourself.
+
 ### Experimental Features
 This package provides support for the experimental data mirror [mirror.flowbased.eu](https://mirror.flowbased.eu/). 
 This allows to download final and prefinal domain from the fast mirror. If the requested day is not available the package will fallback to the JAO publication tool.  

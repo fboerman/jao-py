@@ -9,10 +9,11 @@ from .util import to_snake_case
 from zipfile import ZipFile
 from io import BytesIO
 import os
+from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.6.2"
+__version__ = "0.6.3"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -37,6 +38,8 @@ class JaoPublicationToolClient:
 
         self.NORDIC = 'nordic' in self.BASEURL
         self.version = None # only for intraday
+
+        self.RATE_LIMIT_HANDLER = os.getenv("RATE_LIMIT_HANDLER", 30)
 
     def _starmap_pull(self, url, params, keyname=None):
         r = self.s.get(url, params=params)
@@ -121,6 +124,11 @@ class JaoPublicationToolClient:
 
         return self._query_domain('initialComputation', mtu=mtu, presolved=presolved, cne=cne, co=co, urls_only=urls_only)
 
+    def _query_call(self, url: str, type: str, d_from: pd.Timestamp, d_to: pd.Timestamp):
+        return self.s.get(url + type, params={
+            'FromUTC': d_from.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z'),
+            'ToUTC': d_to.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z')
+        })
 
     def _query_base_fromto(self, d_from: pd.Timestamp, d_to: pd.Timestamp, type: str, split_days=True) -> list[dict]:
         if type in ['monitoring']:
@@ -131,7 +139,7 @@ class JaoPublicationToolClient:
         d_from = d_from.tz_convert('europe/amsterdam')
         d_to = d_to.tz_convert('europe/amsterdam')
         data_total = []
-        for day in pd.date_range(d_from.strftime('%Y-%m-%d'), d_to.strftime('%Y-%m-%d'), tz='europe/amsterdam'):
+        for day in pd.date_range(d_from.strftime('%Y-%m-%d'), d_to.strftime('%Y-%m-%d'), tz='europe/amsterdam', freq='2d'):
             d_from_part = day
             if d_from_part < d_from:
                 d_from_part = d_from
@@ -140,12 +148,16 @@ class JaoPublicationToolClient:
             d_to_part = pd.Timestamp((day+pd.Timedelta(days=1)).strftime('%Y-%m-%d 23:59'), tz='europe/amsterdam')
             if d_to_part > d_to:
                 d_to_part = d_to
-            r = self.s.get(url + type, params={
-                'FromUTC': d_from_part.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z'),
-                'ToUTC': d_to_part.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z')
-            })
+            r = self._query_call(url, type, d_from_part, d_to_part)
+            if r.status_code == 429 and self.RATE_LIMIT_HANDLER > 0:
+                # running into rate limit, then just wait a minute. This is a VERY naive way of handling things but it works
+                # if you dont want this set DISABLE_RATE_LIMIT_HANDLER=1 and handle 429 yourself
+                sleep(self.RATE_LIMIT_HANDLER)
+                r = self._query_call(url, type, d_from_part, d_to_part)
+
             r.raise_for_status()
             data_total += r.json()['data']
+
         if len(data_total) == 0:
             raise NoMatchingDataError
         return data_total
