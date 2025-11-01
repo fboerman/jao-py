@@ -13,7 +13,7 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.6.3"
+__version__ = "0.6.4"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -39,7 +39,7 @@ class JaoPublicationToolClient:
         self.NORDIC = 'nordic' in self.BASEURL
         self.version = None # only for intraday
 
-        self.RATE_LIMIT_HANDLER = os.getenv("RATE_LIMIT_HANDLER", 30)
+        self.RATE_LIMIT_HANDLER = os.getenv("RATE_LIMIT_HANDLER", 60)
 
     def _starmap_pull(self, url, params, keyname=None):
         r = self.s.get(url, params=params)
@@ -139,13 +139,17 @@ class JaoPublicationToolClient:
         d_from = d_from.tz_convert('europe/amsterdam')
         d_to = d_to.tz_convert('europe/amsterdam')
         data_total = []
+        # there is currently a bug on JAO side that DST days count as more then 1 day and trigger a http 400.
+        # this fix makes the requested days smaller if dst days is somewhere in the range
+        # hopefully JAO will fix this soon
+        num_days = 1 if d_from.dst() == d_to.dst() else 0
         for day in pd.date_range(d_from.strftime('%Y-%m-%d'), d_to.strftime('%Y-%m-%d'), tz='europe/amsterdam', freq='2d'):
             d_from_part = day
             if d_from_part < d_from:
                 d_from_part = d_from
             # for DST days, make sure we always query a full day by doing a string conversion trick
             # looks a bit ugly, works great
-            d_to_part = pd.Timestamp((day+pd.Timedelta(days=1)).strftime('%Y-%m-%d 23:59'), tz='europe/amsterdam')
+            d_to_part = pd.Timestamp((day+pd.Timedelta(days=num_days)).strftime('%Y-%m-%d 23:59'), tz='europe/amsterdam')
             if d_to_part > d_to:
                 d_to_part = d_to
             r = self._query_call(url, type, d_from_part, d_to_part)

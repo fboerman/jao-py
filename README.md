@@ -41,7 +41,7 @@ client = JaoPublicationToolPandasIntraDay(version='c') # IDCC(c)
 
 ### Rate Limiter
 JAO currently has a fixed rate limiting of 100 requests per minute, if you surpass this a HTTP 429 is returned.
-The library has a naive way of handling this by sleeping for ```RATE_LIMIT_HANDLER``` seconds, which is by default 30 seconds.  
+The library has a naive way of handling this by sleeping for ```RATE_LIMIT_HANDLER``` seconds, which is by default 60 seconds.  
 If you want to disable this set ```RATE_LIMIT_HANDLER``` to 0 through environment variables and the library will throw a HTTP exception that you can handle yourself.
 
 ### Experimental Features
