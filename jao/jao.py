@@ -18,6 +18,25 @@ __author__ = "Frank Boerman"
 __license__ = "MIT"
 
 
+TSO_ALIASES = {
+    "APG": "10XAT-APG------Z",
+    "CEPS": "10XCZ-CEPS-GRIDE",
+    "ELES": "10XSI-ELES-----1",
+    "AMPRION": "10XDE-RWENET---W",
+    "50HERTZ": "10XDE-VE-TRANSMK",
+    "TRANSELECTRICA": "10XRO-TEL------2",
+    "TENNETGMBH": "10XDE-EON-NETZ-C",
+    "TRANSNETBW": "10XDE-ENBW--TNGX",
+    "TENNETBV": "10X1001A1001A361",
+    "SEPS": "10XSK-SEPS-GRIDB",
+    "RTE": "10XFR-RTE------Q",
+    "PSE": "10XPL-TSO------P",
+    "MAVIR": "10X1001A1001A329",
+    "HOPS": "10XHR-HEP-OPS--A",
+    "ELIA": "10X1001A1001A094",
+}
+
+
 class JaoPublicationToolClient:
     BASEURL = "https://publicationtool.jao.eu/core/api/data/"
 
@@ -48,8 +67,27 @@ class JaoPublicationToolClient:
             return r.json()[keyname]
         return r.json()
 
-    def _query_domain(self, url: str, mtu: pd.Timestamp, presolved: bool = None, cne: str = None, co: str = None,
-                           urls_only: bool = False):
+    def _query_domain(
+        self,
+        url: str,
+        mtu: pd.Timestamp,
+        presolved: bool | None = None,
+        cne: str | None = None,
+        co: str | None = None,
+        tso: str | list[str] | None = None,
+        urls_only: bool = False,
+    ):
+        # Guard clause for MTU
+        if not isinstance(mtu, pd.Timestamp) or mtu.tzinfo is None:
+            raise Exception("Please use a timezoned pandas Timestamp object for mtu")
+
+        # Convert single TSO to list
+        tso = [tso] if isinstance(tso, str) else tso
+
+        # Convert MTU to UTC
+        mtu = mtu.tz_convert("UTC")
+
+        # Build filter and dump to json
         filter = {}
         if cne is not None:
             filter['CnecName'] = cne
@@ -57,15 +95,23 @@ class JaoPublicationToolClient:
             filter['Contingency'] = co
         if presolved is not None:
             filter['NonRedundant' if self.NORDIC else 'Presolved'] = presolved
+        if tso is not None:
+            filter["Tso"] = [
+                TSO_ALIASES.get(t, t) for t in tso
+            ]  # Replase aliases if available
+        filter_json = json.dumps(filter)
 
         # first do a call with zero retrieved data to know how much data is available, then pull all at once
-        r = self.s.get(self.BASEURL + url, params={
-            'FromUtc': mtu.isoformat(),
-            'ToUtc': (mtu + pd.Timedelta(hours=1)).isoformat(),
-            'Filter': json.dumps(filter),
-            'Skip': 0,
-            'Take': 0
-        })
+        r = self.s.get(
+            self.BASEURL + url,
+            params={
+                "FromUtc": mtu.isoformat(),
+                "ToUtc": (mtu + pd.Timedelta(hours=1)).isoformat(),
+                "Filter": filter_json,
+                "Skip": 0,
+                "Take": 0,
+            },
+        )
         r.raise_for_status()
 
         if r.json()['totalRowsWithFilter'] == 0:
@@ -78,13 +124,19 @@ class JaoPublicationToolClient:
         total_num_data = r.json()['totalRowsWithFilter']
         args = []
         for i in range(0, total_num_data, 5000):
-            args.append((self.BASEURL + url, {
-                'FromUtc': mtu.isoformat(),
-                'ToUtc': (mtu + pd.Timedelta(hours=1)).isoformat(),
-                'Filter': json.dumps(filter),
-                'Skip': i,
-                'Take': 5000
-            }, 'data'))
+            args.append(
+                (
+                    self.BASEURL + url,
+                    {
+                        "FromUtc": mtu.isoformat(),
+                        "ToUtc": (mtu + pd.Timedelta(hours=1)).isoformat(),
+                        "Filter": filter_json,
+                        "Skip": i,
+                        "Take": 5000,
+                    },
+                    "data",
+                )
+            )
 
         if urls_only:
             return args
@@ -94,35 +146,64 @@ class JaoPublicationToolClient:
 
         return list(itertools.chain(*results))
 
-    def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None, co: str = None,
-                           urls_only: bool = False) -> list[dict]:
-        if not isinstance(mtu, pd.Timestamp):
-            raise Exception('Please use a timezoned pandas Timestamp object for mtu')
-        if mtu.tzinfo is None:
-            raise Exception('Please use a timezoned pandas Timestamp object for mtu')
+    def query_final_domain(
+        self,
+        mtu: pd.Timestamp,
+        presolved: bool = None,
+        cne: str = None,
+        co: str = None,
+        tso: str | list[str] | None = None,
+        urls_only: bool = False,
+    ) -> list[dict]:
+        return self._query_domain(
+            "finalComputation",
+            mtu=mtu,
+            presolved=presolved,
+            cne=cne,
+            co=co,
+            tso=tso,
+            urls_only=urls_only,
+        )
+
+    def query_prefinal_domain(
+        self,
+        mtu: pd.Timestamp,
+        presolved: bool = None,
+        cne: str = None,
+        co: str = None,
+        tso: str | list[str] | None = None,
+        urls_only: bool = False,
+    ) -> list[dict]:
+        return self._query_domain(
+            "preFinalComputation",
+            mtu=mtu,
+            presolved=presolved,
+            cne=cne,
+            co=co,
+            tso=tso,
+            urls_only=urls_only,
+        )
+
+    def query_initial_domain(
+        self,
+        mtu: pd.Timestamp,
+        presolved: bool = None,
+        cne: str = None,
+        co: str = None,
+        tso: str | list[str] | None = None,
+        urls_only: bool = False,
+    ) -> list[dict]:
         mtu = mtu.tz_convert('UTC')
 
-        return self._query_domain('finalComputation', mtu=mtu, presolved=presolved, cne=cne, co=co, urls_only=urls_only)
-
-    def query_prefinal_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None, co: str = None,
-                           urls_only: bool = False) -> list[dict]:
-        if not isinstance(mtu, pd.Timestamp):
-            raise Exception('Please use a timezoned pandas Timestamp object for mtu')
-        if mtu.tzinfo is None:
-            raise Exception('Please use a timezoned pandas Timestamp object for mtu')
-        mtu = mtu.tz_convert('UTC')
-
-        return self._query_domain('preFinalComputation', mtu=mtu, presolved=presolved, cne=cne, co=co, urls_only=urls_only)
-
-    def query_initial_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None, co: str = None,
-                           urls_only: bool = False) -> list[dict]:
-        if not isinstance(mtu, pd.Timestamp):
-            raise Exception('Please use a timezoned pandas Timestamp object for mtu')
-        if mtu.tzinfo is None:
-            raise Exception('Please use a timezoned pandas Timestamp object for mtu')
-        mtu = mtu.tz_convert('UTC')
-
-        return self._query_domain('initialComputation', mtu=mtu, presolved=presolved, cne=cne, co=co, urls_only=urls_only)
+        return self._query_domain(
+            "initialComputation",
+            mtu=mtu,
+            presolved=presolved,
+            cne=cne,
+            co=co,
+            tso=tso,
+            urls_only=urls_only,
+        )
 
     def _query_call(self, url: str, type: str, d_from: pd.Timestamp, d_to: pd.Timestamp):
         return self.s.get(url + type, params={
@@ -246,8 +327,15 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
         zf.namelist()
         return pd.read_csv(zf.open(zf.namelist()[0]))
 
-    def query_final_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None,
-                           co: str = None, use_mirror: bool = False) -> pd.DataFrame:
+    def query_final_domain(
+        self,
+        mtu: pd.Timestamp,
+        presolved: bool = None,
+        cne: str = None,
+        co: str = None,
+        tso: str | list[str] | None = None,
+        use_mirror: bool = False,
+    ) -> pd.DataFrame:
         """
         when use_mirror (or JAO_USE_MIRROR=1 in env) is set the whole day is returned from mirror.flowbased.eu
 
@@ -258,11 +346,20 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
                 return df
 
         return parse_final_domain(
-            super().query_final_domain(mtu=mtu, presolved=presolved, cne=cne, co=co)
+            super().query_final_domain(
+                mtu=mtu, presolved=presolved, cne=cne, co=co, tso=tso
+            )
         )
 
-    def query_prefinal_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None,
-                           co: str = None, use_mirror: bool = False) -> pd.DataFrame:
+    def query_prefinal_domain(
+        self,
+        mtu: pd.Timestamp,
+        presolved: bool = None,
+        cne: str = None,
+        co: str = None,
+        tso: str | list[str] | None = None,
+        use_mirror: bool = False,
+    ) -> pd.DataFrame:
         """
         when use_mirror (or JAO_USE_MIRROR=1 in env) is set the whole day is returned from mirror.flowbased.eu
 
@@ -273,14 +370,23 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
                 return df
 
         return parse_final_domain(
-            super().query_prefinal_domain(mtu=mtu, presolved=presolved, cne=cne, co=co)
+            super().query_prefinal_domain(
+                mtu=mtu, presolved=presolved, cne=cne, co=co, tso=tso
+            )
         )
 
-
-    def query_initial_domain(self, mtu: pd.Timestamp, presolved: bool = None, cne: str = None,
-                           co: str = None) -> pd.DataFrame:
+    def query_initial_domain(
+        self,
+        mtu: pd.Timestamp,
+        presolved: bool = None,
+        cne: str = None,
+        tso: str | list[str] | None = None,
+        co: str = None,
+    ) -> pd.DataFrame:
         return parse_final_domain(
-            super().query_initial_domain(mtu=mtu, presolved=presolved, cne=cne, co=co)
+            super().query_initial_domain(
+                mtu=mtu, presolved=presolved, cne=cne, co=co, tso=tso
+            )
         )
 
     def query_allocationconstraint(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
