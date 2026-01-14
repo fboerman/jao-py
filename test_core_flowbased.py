@@ -38,6 +38,34 @@ def test_initial_domain(client, mtu):
     assert len(df) == 12430
 
 
+def test_domains_with_tso(client, mtu):
+    # Via TSO alias
+    df = client.query_initial_domain(
+        mtu=mtu,
+        tso="TRANSNETBW",
+    )
+    assert len(df["tso"].unique()) == 1
+    assert len(df) == 139
+
+    # Via TSO EIC
+    df = client.query_prefinal_domain(
+        mtu=mtu,
+        presolved=True,
+        tso="10XDE-EON-NETZ-C",
+    )
+    assert len(df["tso"].unique()) == 1
+    assert len(df) == 4
+
+    # Multiple TSOs
+    df = client.query_final_domain(
+        mtu=mtu,
+        presolved=True,
+        tso=["TENNETBV", "10XDE-EON-NETZ-C"],
+    )
+    assert len(df["tso"].unique()) == 2
+    assert len(df) == 12
+
+
 def test_allocationconstraint(client, mtu):
     df = client.query_allocationconstraint(
         d_from=mtu,
