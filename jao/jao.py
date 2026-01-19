@@ -13,7 +13,7 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.6.4"
+__version__ = "0.6.5"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -98,7 +98,7 @@ class JaoPublicationToolClient:
         if tso is not None:
             filter["Tso"] = [
                 TSO_ALIASES.get(t, t) for t in tso
-            ]  # Replase aliases if available
+            ]  # Replace aliases if available
         filter_json = json.dumps(filter)
 
         # first do a call with zero retrieved data to know how much data is available, then pull all at once
