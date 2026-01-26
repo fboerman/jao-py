@@ -11,7 +11,7 @@ def client():
 
 @pytest.fixture()
 def mtu():
-    mtu = pd.Timestamp('2025-03-23 12:00', tz='europe/amsterdam')
+    mtu = pd.Timestamp('2025-03-23 12:00', tz='Europe/Amsterdam')
     yield mtu
 
 
@@ -127,7 +127,7 @@ def test_lta(client, mtu):
 
 def test_validation(client):
     # take different mtu then other tests because there was no iva on selected hour
-    mtu = pd.Timestamp('2023-03-23 14:00', tz='europe/amsterdam')
+    mtu = pd.Timestamp('2023-03-23 14:00', tz='Europe/Amsterdam')
     df = client.query_validations(
         d_from=mtu,
         d_to=mtu + pd.Timedelta(hours=1)
@@ -138,7 +138,7 @@ def test_validation(client):
 
 def test_status(client, mtu):
     # take different mtu then other tests because there was no fallback in selected hour
-    mtu = pd.Timestamp('2023-03-31 14:00', tz='europe/amsterdam')
+    mtu = pd.Timestamp('2023-03-31 14:00', tz='Europe/Amsterdam')
     df = client.query_status(
         d_from=mtu,
         d_to=mtu + pd.Timedelta(hours=1)

@@ -28,23 +28,23 @@ def parse_final_domain(data: list[dict]) -> pd.DataFrame:
     df = df[columns]
     df = df.rename(columns={'id': 'id_original'})
     # parse datetime, convert to localtime and adjust column name
-    df['date_time_utc'] = pd.to_datetime(df['date_time_utc'], utc=True).dt.tz_convert('europe/amsterdam')
+    df['date_time_utc'] = pd.to_datetime(df['date_time_utc'], utc=True).dt.tz_convert('Europe/Amsterdam')
     return df.rename(columns={'date_time_utc': 'mtu'})
 
 
 def parse_monitoring(data: list[dict]) -> pd.DataFrame:
     df = pd.DataFrame(data)
     if 'businessDayUtc' in df:
-        df['businessDay'] = pd.to_datetime(df['businessDayUtc'], utc=True).dt.tz_convert('europe/amsterdam').dt.date
+        df['businessDay'] = pd.to_datetime(df['businessDayUtc'], utc=True).dt.tz_convert('Europe/Amsterdam').dt.date
         df = df.drop(columns=['businessDayUtc'])
     for c in ['deadline', 'lastModifiedOn']:
-        df[c] = pd.to_datetime(df[c], utc=True).dt.tz_convert('europe/amsterdam')
+        df[c] = pd.to_datetime(df[c], utc=True).dt.tz_convert('Europe/Amsterdam')
     return df.drop(columns=['id'])
 
 
 def parse_base_output(data: list[dict]) -> pd.DataFrame:
     df = pd.DataFrame(data).drop(columns='id')
-    df['dateTimeUtc'] = pd.to_datetime(df['dateTimeUtc'], utc=True).dt.tz_convert('europe/amsterdam')
+    df['dateTimeUtc'] = pd.to_datetime(df['dateTimeUtc'], utc=True).dt.tz_convert('Europe/Amsterdam')
     df = df.set_index('dateTimeUtc')
     df.index.name = 'mtu'
     return df

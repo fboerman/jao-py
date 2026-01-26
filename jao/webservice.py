@@ -96,9 +96,9 @@ class JaoAPIClient:
             return r.json()
         df = pd.DataFrame(r.json())
         df['curtailmentPeriodStart'] = pd.to_datetime(df['curtailmentPeriodStart'])\
-                .dt.tz_convert('europe/amsterdam')
+                .dt.tz_convert('Europe/Amsterdam')
         df['curtailmentPeriodStop'] = pd.to_datetime(df['curtailmentPeriodStop'])\
-                .dt.tz_convert('europe/amsterdam')
+                .dt.tz_convert('Europe/Amsterdam')
         return df
 
     def query_auction_bids_by_id(self, auction_id: str, as_dict: bool = False) -> pd.DataFrame | list:

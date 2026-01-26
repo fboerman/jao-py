@@ -13,7 +13,7 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.6.5"
+__version__ = "0.6.6"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -217,20 +217,20 @@ class JaoPublicationToolClient:
         else:
             url = self.BASEURL
         # align on SDAC/SIDC business days, so in timezone amsterdam
-        d_from = d_from.tz_convert('europe/amsterdam')
-        d_to = d_to.tz_convert('europe/amsterdam')
+        d_from = d_from.tz_convert('Europe/Amsterdam')
+        d_to = d_to.tz_convert('Europe/Amsterdam')
         data_total = []
         # there is currently a bug on JAO side that DST days count as more then 1 day and trigger a http 400.
         # this fix makes the requested days smaller if dst days is somewhere in the range
         # hopefully JAO will fix this soon
         num_days = 1 if d_from.dst() == d_to.dst() else 0
-        for day in pd.date_range(d_from.strftime('%Y-%m-%d'), d_to.strftime('%Y-%m-%d'), tz='europe/amsterdam', freq='2d'):
+        for day in pd.date_range(d_from.strftime('%Y-%m-%d'), d_to.strftime('%Y-%m-%d'), tz='Europe/Amsterdam', freq='2d'):
             d_from_part = day
             if d_from_part < d_from:
                 d_from_part = d_from
             # for DST days, make sure we always query a full day by doing a string conversion trick
             # looks a bit ugly, works great
-            d_to_part = pd.Timestamp((day+pd.Timedelta(days=num_days)).strftime('%Y-%m-%d 23:59'), tz='europe/amsterdam')
+            d_to_part = pd.Timestamp((day+pd.Timedelta(days=num_days)).strftime('%Y-%m-%d 23:59'), tz='Europe/Amsterdam')
             if d_to_part > d_to:
                 d_to_part = d_to
             r = self._query_call(url, type, d_from_part, d_to_part)

@@ -104,7 +104,7 @@ def _parse_utilitytool_xml(xml: bytes | str, nodename: str, columnnames: list, d
         lambda row: datetime.strptime(row['date'], '%Y-%m-%dT00:00:00').replace(hour=int(row['hour']) - 1),
         axis=1)
     df = df.drop(columns=['date', 'hour'])
-    return df.set_index('timestamp').tz_localize('europe/amsterdam')
+    return df.set_index('timestamp').tz_localize('Europe/Amsterdam')
 
 
 def _parse_maczt_final_flowbased_domain(df: pd.DataFrame, zone='NL') -> pd.DataFrame:
