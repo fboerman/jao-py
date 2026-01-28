@@ -13,7 +13,7 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.6.6"
+__version__ = "0.6.7"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -317,6 +317,12 @@ class JaoPublicationToolClient:
             type='refprog'
         )
 
+    def query_congestion_income(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> list[dict]:
+        return self._query_base_fromto(
+            d_from=d_from, d_to=d_to,
+            type='congestionIncome'
+        )
+
 class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def _query_mirror(self, name: str, date: str) -> pd.DataFrame:
         r = requests.get(f'https://mirror.flowbased.eu/dacc/{name}/{date}')
@@ -475,4 +481,9 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def query_refprog(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
         return parse_base_output(
             super().query_refprog(d_from=d_from, d_to=d_to)
+        )
+
+    def query_congestion_income(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
+        return parse_base_output(
+            super().query_congestion_income(d_from=d_from, d_to=d_to)
         )

@@ -184,3 +184,11 @@ def test_refprog(client, mtu):
     )
     assert len(df) == 1
     assert len(df.columns) == 88
+
+def test_congestion_income(client, mtu):
+    df = client.query_congestion_income(
+        d_from=mtu,
+        d_to=mtu + pd.Timedelta(hours=1)
+    )
+    assert len(df) == 1
+    assert len(df.columns) == 60
