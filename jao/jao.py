@@ -13,7 +13,7 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.6.7"
+__version__ = "0.6.8"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -263,6 +263,10 @@ class JaoPublicationToolClient:
             type='netPos'
         )
 
+    def query_net_position_fromto(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> list[dict]:
+        return self._query_base_fromto(d_from, d_to, 'netPos')
+
+
     def query_active_constraints(self, day: pd.Timestamp) -> list[dict]:
         # although the same skip/take mechanism is active on this endpoint as the final domain, this is not needed to be used
         #   by definition active constraints are only a few so its overkill to start pagination
@@ -405,6 +409,13 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
             super().query_net_position(day=day)
         ).rename(columns=lambda x: x.replace('hub_', '')) \
             .rename(columns={'DE': 'DE_LU'})
+
+    def query_net_position_fromto(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
+        return parse_base_output(
+            super().query_net_position_fromto(d_from=d_from, d_to=d_to)
+        ).rename(columns=lambda x: x.replace('hub_', '')) \
+            .rename(columns={'DE': 'DE_LU'})
+
 
     def query_active_constraints(self, day: pd.Timestamp) -> pd.DataFrame:
         return parse_base_output(

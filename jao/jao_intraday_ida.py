@@ -9,6 +9,9 @@ class JaoPublicationToolPandasIntraDayIda:
     def query_net_position(self, day: pd.Timestamp) -> pd.DataFrame:
         return self._client.query_net_position(day=day)
 
+    def query_net_position_fromto(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
+        return self._client.query_net_position_fromto(d_from=d_from, d_to=d_to)
+
     def query_scheduled_exchange(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
         return self._client.query_scheduled_exchange(d_from=d_from, d_to=d_to)
 
