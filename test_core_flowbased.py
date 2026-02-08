@@ -192,3 +192,18 @@ def test_congestion_income(client, mtu):
     )
     assert len(df) == 1
     assert len(df.columns) == 60
+
+# these two test if the splitting works as well as specific DST edge cases
+def test_range(client, mtu):
+    df = client.query_net_position_fromto(
+        mtu,
+        mtu + pd.Timedelta(days=10)
+    )
+    assert len(pd.date_range(mtu, mtu+pd.Timedelta(days=10), freq='h')) - 1 == len(df)
+
+def test_range_2(client, mtu):
+    df = client.query_lta(
+        pd.Timestamp('2025-10-25', tz='Europe/Amsterdam'),
+        pd.Timestamp('2025-10-27', tz='Europe/Amsterdam')
+    )
+    assert len(df) == 49
