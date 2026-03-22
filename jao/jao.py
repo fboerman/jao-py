@@ -13,7 +13,7 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.6.9"
+__version__ = "0.7.0"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -36,10 +36,7 @@ TSO_ALIASES = {
     "ELIA": "10X1001A1001A094",
 }
 
-
-class JaoPublicationToolClient:
-    BASEURL = "https://publicationtool.jao.eu/core/api/data/"
-
+class JaoPublicationToolClientBase:
     def __init__(self, api_key: str = None, proxies: dict = None):
         self.s = requests.Session()
         self.s.headers.update({
@@ -146,6 +143,66 @@ class JaoPublicationToolClient:
 
         return list(itertools.chain(*results))
 
+    def _query_call(self, url: str, type: str, d_from: pd.Timestamp, d_to: pd.Timestamp):
+        return self.s.get(url + type, params={
+            'FromUTC': d_from.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z'),
+            'ToUTC': d_to.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z')
+        })
+
+    def _query_base_fromto(self, d_from: pd.Timestamp, d_to: pd.Timestamp, type: str, split_days=True) -> list[dict]:
+        if type in ['monitoring']:
+            url = self.BASEURL.replace('/data/', '/system/')
+        else:
+            url = self.BASEURL
+        # align on SDAC/SIDC business days, so in timezone amsterdam
+        d_from = d_from.tz_convert('Europe/Amsterdam')
+        d_to = d_to.tz_convert('Europe/Amsterdam')
+        data_total = []
+        for day in pd.date_range(d_from.strftime('%Y-%m-%d'), d_to.strftime('%Y-%m-%d'), tz='Europe/Amsterdam', freq='2d'):
+            d_from_part = day
+            if d_from_part < d_from:
+                d_from_part = d_from
+            # for DST days, make sure we always query a full day by doing a string conversion trick
+            # looks a bit ugly, works great
+            d_to_part = pd.Timestamp((day+pd.Timedelta(days=1)).strftime('%Y-%m-%d 23:59'), tz='Europe/Amsterdam')
+            if d_to_part > d_to:
+                d_to_part = d_to
+            r = self._query_call(url, type, d_from_part, d_to_part)
+            if r.status_code == 429 and self.RATE_LIMIT_HANDLER > 0:
+                # running into rate limit, then just wait a minute. This is a VERY naive way of handling things but it works
+                # if you dont want this set DISABLE_RATE_LIMIT_HANDLER=1 and handle 429 yourself
+                sleep(self.RATE_LIMIT_HANDLER)
+                r = self._query_call(url, type, d_from_part, d_to_part)
+            if r.status_code == 400:
+                # at dst it is possible to get 400 error because jao thinks its more days then 2
+                # simply try both of days seperate
+                for d in pd.date_range(d_from_part, d_to_part):
+                    r = self._query_call(url, type,
+                                         pd.Timestamp(d.strftime('%Y-%m-%d'), tz='Europe/Amsterdam'),
+                                         pd.Timestamp(d.strftime('%Y-%m-%d 23:59'), tz='Europe/Amsterdam'))
+                    r.raise_for_status()
+                    data_total += r.json()['data']
+                continue
+            r.raise_for_status()
+            data_total += r.json()['data']
+
+        if len(data_total) == 0:
+            raise NoMatchingDataError
+        return data_total
+
+    def _query_base_day(self, day: pd.Timestamp, type: str) -> list[dict]:
+        d_from = day.replace(hour=0, minute=0)
+        d_to = day.replace(hour=23, minute=59)
+        return self._query_base_fromto(
+            d_from=d_from,
+            d_to=d_to,
+            type=type,
+            split_days=False
+        )
+
+class JaoPublicationToolClient(JaoPublicationToolClientBase):
+    BASEURL = "https://publicationtool.jao.eu/core/api/data/"
+
     def query_final_domain(
         self,
         mtu: pd.Timestamp,
@@ -203,63 +260,6 @@ class JaoPublicationToolClient:
             co=co,
             tso=tso,
             urls_only=urls_only,
-        )
-
-    def _query_call(self, url: str, type: str, d_from: pd.Timestamp, d_to: pd.Timestamp):
-        return self.s.get(url + type, params={
-            'FromUTC': d_from.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z'),
-            'ToUTC': d_to.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z')
-        })
-
-    def _query_base_fromto(self, d_from: pd.Timestamp, d_to: pd.Timestamp, type: str, split_days=True) -> list[dict]:
-        if type in ['monitoring']:
-            url = self.BASEURL.replace('/data/', '/system/')
-        else:
-            url = self.BASEURL
-        # align on SDAC/SIDC business days, so in timezone amsterdam
-        d_from = d_from.tz_convert('Europe/Amsterdam')
-        d_to = d_to.tz_convert('Europe/Amsterdam')
-        data_total = []
-        for day in pd.date_range(d_from.strftime('%Y-%m-%d'), d_to.strftime('%Y-%m-%d'), tz='Europe/Amsterdam', freq='2d'):
-            d_from_part = day
-            if d_from_part < d_from:
-                d_from_part = d_from
-            # for DST days, make sure we always query a full day by doing a string conversion trick
-            # looks a bit ugly, works great
-            d_to_part = pd.Timestamp((day+pd.Timedelta(days=1)).strftime('%Y-%m-%d 23:59'), tz='Europe/Amsterdam')
-            if d_to_part > d_to:
-                d_to_part = d_to
-            r = self._query_call(url, type, d_from_part, d_to_part)
-            if r.status_code == 429 and self.RATE_LIMIT_HANDLER > 0:
-                # running into rate limit, then just wait a minute. This is a VERY naive way of handling things but it works
-                # if you dont want this set DISABLE_RATE_LIMIT_HANDLER=1 and handle 429 yourself
-                sleep(self.RATE_LIMIT_HANDLER)
-                r = self._query_call(url, type, d_from_part, d_to_part)
-            if r.status_code == 400:
-                # at dst it is possible to get 400 error because jao thinks its more days then 2
-                # simply try both of days seperate
-                for d in pd.date_range(d_from_part, d_to_part):
-                    r = self._query_call(url, type,
-                                         pd.Timestamp(d.strftime('%Y-%m-%d'), tz='Europe/Amsterdam'),
-                                         pd.Timestamp(d.strftime('%Y-%m-%d 23:59'), tz='Europe/Amsterdam'))
-                    r.raise_for_status()
-                    data_total += r.json()['data']
-                continue
-            r.raise_for_status()
-            data_total += r.json()['data']
-
-        if len(data_total) == 0:
-            raise NoMatchingDataError
-        return data_total
-
-    def _query_base_day(self, day: pd.Timestamp, type: str) -> list[dict]:
-        d_from = day.replace(hour=0, minute=0)
-        d_to = day.replace(hour=23, minute=59)
-        return self._query_base_fromto(
-            d_from=d_from,
-            d_to=d_to,
-            type=type,
-            split_days=False
         )
 
     def query_net_position(self, day: pd.Timestamp) -> list[dict]:
