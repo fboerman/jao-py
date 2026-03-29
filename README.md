@@ -23,6 +23,7 @@ The package comes with the current pandas clients:
 - [`JaoPublicationToolPandasClient`](#JaoPublicationToolClient): Pandas client for the Core Day-Ahead publication tool defined [here](https://publicationtool.jao.eu/core/)
 - [`JaoPublicationToolPandasIntraDay`](#JaoPublicationToolPandasIntraDay): client for Core Intradaypublication tool for Intraday defined [here](https://publicationtool.jao.eu/coreID/)
 - [`JaoPublicationToolPandasNordics`](#JaoPublicationToolPandasNordics): client for Nordic Day-Ahead publication tool defined [here](https://publicationtool.jao.eu/nordic/)
+- [`JaoPublicationToolPandasItalyNorth`](#JaoPublicationToolPandasNordics): client for Italy North publication tool defined [here](https://publicationtool.jao.eu/ibwt/)
 The publication tool clients have valid data from their respective go lives:
 - Core Day-Ahead: business day 2022-06-09 onwards
 - Core Intraday(a): business day 2024-06-14 onwards
