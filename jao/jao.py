@@ -482,7 +482,7 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
             pd.DataFrame):
         return parse_base_output(
             super().query_scheduled_exchange(d_from=d_from, d_to=d_to)
-        )
+        ).drop(columns=['border_DK1_DE', 'border_DE_DK1'])
 
     def query_monitoring(self, day: pd.Timestamp) -> pd.DataFrame:
         return parse_monitoring(
