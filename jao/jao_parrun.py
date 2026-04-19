@@ -4,6 +4,10 @@ from .parsers import parse_base_output
 import warnings
 
 
+class JaoPublicationToolPandasParRun(JaoPublicationToolPandasClient):
+    BASEURL = "https://parallelrun-publicationtool.jao.eu/core/api/data/"
+
+
 class JaoPublicationToolPandasIntraDayParRun(JaoPublicationToolPandasClient):
     def __init__(self, version, *args, **kwargs):
         super().__init__(*args, **kwargs)
