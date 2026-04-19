@@ -158,7 +158,7 @@ class JaoPublicationToolClientBase:
         d_from = d_from.tz_convert('Europe/Amsterdam')
         d_to = d_to.tz_convert('Europe/Amsterdam')
         data_total = []
-        for day in pd.date_range(d_from.strftime('%Y-%m-%d'), d_to.strftime('%Y-%m-%d'), tz='Europe/Amsterdam', freq='2d'):
+        for day in pd.date_range(d_from.strftime('%Y-%m-%d'), d_to.strftime('%Y-%m-%d'), tz='Europe/Amsterdam', freq='2D'):
             d_from_part = day
             if d_from_part < d_from:
                 d_from_part = d_from
