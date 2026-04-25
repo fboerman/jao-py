@@ -13,7 +13,7 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.7.1"
+__version__ = "0.7.2"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -356,7 +356,7 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
 
         """
         if (use_mirror or os.environ.get('JAO_USE_MIRROR', '0') == '1') and self.version is None:
-            df = self._query_mirror(name='final_domain', date=mtu.strftime('%Y-%m-%d'))
+            df = self._query_mirror(name='final_domain', date=mtu.tz_convert('Europe/Amsterdam').strftime('%Y-%m-%d'))
             if df is not None:
                 return df
 
@@ -380,7 +380,7 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
 
         """
         if (use_mirror or os.environ.get('JAO_USE_MIRROR', '0') == '1') and self.version is None:
-            df = self._query_mirror(name='prefinal_domain', date=mtu.strftime('%Y-%m-%d'))
+            df = self._query_mirror(name='prefinal_domain', date=mtu.tz_convert('Europe/Amsterdam').strftime('%Y-%m-%d'))
             if df is not None:
                 return df
 
