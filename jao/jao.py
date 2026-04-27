@@ -13,7 +13,7 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.7.2"
+__version__ = "0.7.3"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -96,18 +96,24 @@ class JaoPublicationToolClientBase:
             filter["Tso"] = [
                 TSO_ALIASES.get(t, t) for t in tso
             ]  # Replace aliases if available
-        filter_json = json.dumps(filter)
+        if len(filter) != 0:
+            filter_json = json.dumps(filter)
+        else:
+            filter_json = None
 
         # first do a call with zero retrieved data to know how much data is available, then pull all at once
-        r = self.s.get(
-            self.BASEURL + url,
-            params={
+        params = {
                 "FromUtc": mtu.isoformat(),
                 "ToUtc": (mtu + pd.Timedelta(hours=1)).isoformat(),
-                "Filter": filter_json,
                 "Skip": 0,
                 "Take": 0,
-            },
+            }
+        if filter_json:
+            params['Filter'] = filter_json
+
+        r = self.s.get(
+            self.BASEURL + url,
+            params=params,
         )
         r.raise_for_status()
 
@@ -121,16 +127,18 @@ class JaoPublicationToolClientBase:
         total_num_data = r.json()['totalRowsWithFilter']
         args = []
         for i in range(0, total_num_data, 5000):
+            params = {
+                "FromUtc": mtu.isoformat(),
+                "ToUtc": (mtu + pd.Timedelta(hours=1)).isoformat(),
+                "Skip": i,
+                "Take": 5000,
+            }
+            if filter_json:
+                params['Filter'] = filter_json
             args.append(
                 (
                     self.BASEURL + url,
-                    {
-                        "FromUtc": mtu.isoformat(),
-                        "ToUtc": (mtu + pd.Timedelta(hours=1)).isoformat(),
-                        "Filter": filter_json,
-                        "Skip": i,
-                        "Take": 5000,
-                    },
+                    params,
                     "data",
                 )
             )
