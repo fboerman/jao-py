@@ -13,7 +13,7 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.7.3"
+__version__ = "0.7.4"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 

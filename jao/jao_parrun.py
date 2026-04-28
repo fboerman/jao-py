@@ -16,6 +16,9 @@ class JaoPublicationToolPandasIntraDayParRun(JaoPublicationToolPandasClient):
             warnings.warn("Parallel run of IDCC(c) is over, for production data use the normal client", DeprecationWarning)
         elif version == 'd':
             self.BASEURL = "https://parallelrun-publicationtool.jao.eu/coreID/api/data/IDCCD_"
+            warnings.warn("Parallel run of IDCC(d) is over, for production data use the normal client", DeprecationWarning)
+        elif version == 'e':
+            self.BASEURL = "https://parallelrun-publicationtool.jao.eu/coreID/api/data/IDCCE_"
         else:
             raise NotImplementedError
 
