@@ -13,7 +13,7 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.7.4"
+__version__ = "0.7.5"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -440,7 +440,7 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def query_maxbex(self, day: pd.Timestamp, from_zone: str = None, to_zone: str = None) -> pd.DataFrame:
         df = parse_base_output(
             super().query_maxbex(day=day)
-        ).rename(columns=lambda x: x.lstrip('border_').replace('_', '>'))
+        ).rename(columns=lambda x: x.lstrip('border_').replace('_', '>', 1))
 
         if from_zone is not None:
             df = df[[c for c in df.columns if c.split('>')[0] == from_zone]]

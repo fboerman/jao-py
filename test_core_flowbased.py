@@ -87,7 +87,7 @@ def test_net_position(client, mtu):
         day=mtu
     )
     assert len(df) == 24
-    assert len(df.columns) == 14
+    assert len(df.columns) == 23
 
 
 def test_active_constraints(client, mtu):
@@ -113,7 +113,7 @@ def test_minmax_np(client, mtu):
         day=mtu,
     )
     assert len(df) == 24
-    assert len(df.columns) == 28
+    assert len(df.columns) == 46
 
 
 def test_lta(client, mtu):
@@ -122,7 +122,7 @@ def test_lta(client, mtu):
         d_to=mtu + pd.Timedelta(hours=1)
     )
     assert len(df) == 1
-    assert len(df.columns) == 38
+    assert len(df.columns) == 46
 
 
 def test_validation(client):
@@ -174,7 +174,7 @@ def test_scheduled_exchange(client, mtu):
         d_to=mtu + pd.Timedelta(hours=1)
     )
     assert len(df) == 1
-    assert len(df.columns) == 44
+    assert len(df.columns) == 62
 
 
 def test_refprog(client, mtu):
@@ -183,7 +183,7 @@ def test_refprog(client, mtu):
         d_to=mtu + pd.Timedelta(hours=1)
     )
     assert len(df) == 1
-    assert len(df.columns) == 90
+    assert len(df.columns) == 87
 
 def test_congestion_income(client, mtu):
     df = client.query_congestion_income(
