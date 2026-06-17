@@ -133,7 +133,7 @@ def test_validation(client):
         d_to=mtu + pd.Timedelta(hours=1)
     )
     assert len(df) == 13
-    assert len(df.columns) == 29
+    assert len(df.columns) == 38
 
 
 def test_status(client, mtu):
@@ -174,7 +174,7 @@ def test_scheduled_exchange(client, mtu):
         d_to=mtu + pd.Timedelta(hours=1)
     )
     assert len(df) == 1
-    assert len(df.columns) == 62
+    assert len(df.columns) == 56
 
 
 def test_refprog(client, mtu):
