@@ -13,7 +13,7 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.7.5"
+__version__ = "0.7.6"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -463,7 +463,7 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def query_validations(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
         df = parse_base_output(
             super().query_validations(d_from=d_from, d_to=d_to)
-        ).rename(columns=to_snake_case)
+        ).rename(columns=lambda c: to_snake_case(c) if not c.startswith('coreNp_') else c)
         # sometimes JAO returns some strange data, probably because its still loading, filter that out here
         df = df[~df['tso'].str.contains('CBCO')]
         if len(df) == 0:
