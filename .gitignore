@@ -3,5 +3,4 @@ __pycache__
 venv
 secret.py
 *.egg-info
-uv.lock
 dist
