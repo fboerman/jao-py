@@ -13,7 +13,7 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.7.6"
+__version__ = "0.7.7"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -100,6 +100,15 @@ class JaoPublicationToolClientBase:
             filter_json = json.dumps(filter)
         else:
             filter_json = None
+
+        if os.getenv('JAO_EXPERIMENTAL_NO_PAGINATION', '0') == '1':
+            params = {
+                "FromUtc": mtu.isoformat(),
+                "ToUtc": (mtu + pd.Timedelta(hours=1)).isoformat()
+            }
+            if filter_json:
+                params['Filter'] = filter_json
+            return self._starmap_pull(self.BASEURL + url, params=params, keyname='data')
 
         # first do a call with zero retrieved data to know how much data is available, then pull all at once
         params = {
@@ -363,7 +372,7 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
         when use_mirror (or JAO_USE_MIRROR=1 in env) is set the whole day is returned from mirror.flowbased.eu
 
         """
-        if (use_mirror or os.environ.get('JAO_USE_MIRROR', '0') == '1') and self.version is None:
+        if (use_mirror or os.getenv('JAO_USE_MIRROR', '0') == '1') and self.version is None:
             df = self._query_mirror(name='final_domain', date=mtu.tz_convert('Europe/Amsterdam').strftime('%Y-%m-%d'))
             if df is not None:
                 return df
@@ -490,7 +499,7 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
             pd.DataFrame):
         return parse_base_output(
             super().query_scheduled_exchange(d_from=d_from, d_to=d_to)
-        ).drop(columns=['border_DK1_DE', 'border_DE_DK1'])
+        )
 
     def query_monitoring(self, day: pd.Timestamp) -> pd.DataFrame:
         return parse_monitoring(

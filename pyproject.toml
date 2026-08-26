@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jao-py"
+dynamic = ["version"]
+description = "A python wrapper for various API of JAO"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+authors = [{ name = "Frank Boerman-Lima", email = "frank@amunanalytics.eu" }]
+dependencies = [
+    "requests",
+    "pandas",
+    "python-dateutil",
+    "beautifulsoup4"
+]
+
+[dependency-groups]
+dev = [
+    "python-dotenv",
+    "ruff",
+    "pre-commit",
+    "pytest",
+    "pytest-xdist"
+]
+
+[project.urls]
+Homepage = "https://github.com/fboerman/jao-py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["jao"]
+
+[tool.hatch.version]
+source = "regex"
+path = "jao/jao.py"

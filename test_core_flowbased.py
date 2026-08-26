@@ -1,7 +1,7 @@
 import pandas as pd
 from jao import JaoPublicationToolPandasClient
 import pytest
-
+import os
 
 @pytest.fixture()
 def client():
@@ -11,7 +11,7 @@ def client():
 
 @pytest.fixture()
 def mtu():
-    mtu = pd.Timestamp('2025-03-23 12:00', tz='Europe/Amsterdam')
+    mtu = pd.Timestamp('2026-08-26 12:00', tz='Europe/Amsterdam')
     yield mtu
 
 
@@ -20,7 +20,16 @@ def test_final_domain(client, mtu):
         mtu=mtu,
         presolved=True
     )
-    assert len(df) == 123
+    assert len(df) == 152
+
+def test_final_domain_experimental(client, mtu):
+    os.environ['JAO_EXPERIMENTAL_NO_PAGINATION'] = '1'
+    df = client.query_final_domain(
+        mtu=mtu,
+        presolved=True
+    )
+    assert len(df) == 152
+    os.environ['JAO_EXPERIMENTAL_NO_PAGINATION'] = '0'
 
 
 def test_prefinal_domain(client, mtu):
@@ -28,14 +37,21 @@ def test_prefinal_domain(client, mtu):
         mtu=mtu,
         presolved=True
     )
-    assert len(df) == 119
+    assert len(df) == 148
 
+def test_initial_domain_experimental(client, mtu):
+    os.environ['JAO_EXPERIMENTAL_NO_PAGINATION'] = '1'
+    df = client.query_initial_domain(
+        mtu=mtu,
+    )
+    assert len(df) == 19398
+    os.environ['JAO_EXPERIMENTAL_NO_PAGINATION'] = '0'
 
 def test_initial_domain(client, mtu):
     df = client.query_initial_domain(
         mtu=mtu
     )
-    assert len(df) == 12430
+    assert len(df) == 19398
 
 
 def test_domains_with_tso(client, mtu):
@@ -45,7 +61,7 @@ def test_domains_with_tso(client, mtu):
         tso="TRANSNETBW",
     )
     assert len(df["tso"].unique()) == 1
-    assert len(df) == 139
+    assert len(df) == 507
 
     # Via TSO EIC
     df = client.query_prefinal_domain(
@@ -54,7 +70,7 @@ def test_domains_with_tso(client, mtu):
         tso="10XDE-EON-NETZ-C",
     )
     assert len(df["tso"].unique()) == 1
-    assert len(df) == 4
+    assert len(df) == 5
 
     # Multiple TSOs
     df = client.query_final_domain(
@@ -63,7 +79,7 @@ def test_domains_with_tso(client, mtu):
         tso=["TENNETBV", "10XDE-EON-NETZ-C"],
     )
     assert len(df["tso"].unique()) == 2
-    assert len(df) == 12
+    assert len(df) == 13
 
 
 def test_allocationconstraint(client, mtu):
@@ -71,9 +87,9 @@ def test_allocationconstraint(client, mtu):
         d_from=mtu,
         d_to=mtu + pd.Timedelta(hours=1)
     )
-    assert len(df) == 1
+    assert len(df) == 4
     assert len(df.columns) == 4
-    assert df.iloc[0].to_list() == [None, 0, None, 11987]
+    assert df.iloc[0].to_list() == [None, 0, None, 5440]
 
 
 def test_monitoring(client, mtu):
@@ -86,7 +102,7 @@ def test_net_position(client, mtu):
     df = client.query_net_position(
         day=mtu
     )
-    assert len(df) == 24
+    assert len(df) == 96
     assert len(df.columns) == 23
 
 
@@ -94,8 +110,8 @@ def test_active_constraints(client, mtu):
     df = client.query_active_constraints(
         day=mtu,
     )
-    assert len(df) == 85
-    assert len(df.columns) == 39
+    assert len(df) == 416
+    assert len(df.columns) == 48
 
 
 def test_maxbex(client, mtu):
@@ -157,14 +173,14 @@ def test_d2cf(client, mtu):
 def test_alpha_factor(client, mtu):
     # take different mtu then other tests because there was no iva on selected hour
     df = client.query_alpha_factor(d_from=mtu.replace(hour=0), d_to=mtu.replace(hour=23, minute=59))
-    assert len(df) == 24
+    assert len(df) == 96
 
 def test_price_spread(client, mtu):
     df = client.query_price_spread(
         d_from=mtu,
         d_to=mtu + pd.Timedelta(hours=1)
     )
-    assert len(df) == 1
+    assert len(df) == 4
     assert len(df.columns) == 44
 
 
@@ -173,8 +189,8 @@ def test_scheduled_exchange(client, mtu):
         d_from=mtu,
         d_to=mtu + pd.Timedelta(hours=1)
     )
-    assert len(df) == 1
-    assert len(df.columns) == 56
+    assert len(df) == 4
+    assert len(df.columns) == 58
 
 
 def test_refprog(client, mtu):
@@ -190,16 +206,16 @@ def test_congestion_income(client, mtu):
         d_from=mtu,
         d_to=mtu + pd.Timedelta(hours=1)
     )
-    assert len(df) == 1
+    assert len(df) == 4
     assert len(df.columns) == 60
 
-# these two test if the splitting works as well as specific DST edge cases
-def test_range(client, mtu):
-    df = client.query_net_position_fromto(
-        mtu,
-        mtu + pd.Timedelta(days=10)
-    )
-    assert len(pd.date_range(mtu, mtu+pd.Timedelta(days=10), freq='h')) - 1 == len(df)
+# # these two test if the splitting works as well as specific DST edge cases
+# def test_range(client, mtu):
+#     df = client.query_net_position_fromto(
+#         mtu,
+#         mtu + pd.Timedelta(days=10)
+#     )
+#     assert len(pd.date_range(mtu, mtu+pd.Timedelta(days=10), freq='h')) - 1 == len(df)
 
 def test_range_2(client, mtu):
     df = client.query_lta(

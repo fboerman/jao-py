@@ -46,9 +46,12 @@ The library has a naive way of handling this by sleeping for ```RATE_LIMIT_HANDL
 If you want to disable this set ```RATE_LIMIT_HANDLER``` to 0 through environment variables and the library will throw a HTTP exception that you can handle yourself.
 
 ### Experimental Features
+#### Mirror
 This package provides support for the experimental data mirror [mirror.flowbased.eu](https://mirror.flowbased.eu/). 
 This allows to download final and prefinal domain from the fast mirror. If the requested day is not available the package will fallback to the JAO publication tool.  
 To enable it either use ```use_mirror=True``` in the function call or set the environment variable ```JAO_USE_MIRROR=1```, by default this feature is off.
+#### Disable Pagination for domain data
+Sometimes disabling pagination on domain data helps with API stability. In order to use this set environment variable ```JAO_EXPERIMENTAL_NO_PAGINATION=1```
 
 ### Deprecated clients
 The package also includes legacy clients for flowbased CWE data in the CWE subpackage. These return data up until business day 2022-06-08
