@@ -10,12 +10,6 @@ jobs:
   run-tests:
     name: Run tests after commit
     runs-on: ubuntu-22.04
-    env:
-      TZ: Europe/Amsterdam
-      LANG: en_US.UTF-8
-      LANGUAGE: en_US.UTF-8
-      LC_ALL: en_US.UTF-8
-      UV_PROJECT_ENVIRONMENT: /usr/local
     steps:
       - uses: actions/checkout@master
       - name: Set up Python 3.14
@@ -38,4 +32,4 @@ jobs:
           uv sync --frozen
       - name: Test with pytest
         run: |
-          pytest
+          uv run pytest
