@@ -13,7 +13,7 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.7.7"
+__version__ = "0.7.8"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -108,7 +108,12 @@ class JaoPublicationToolClientBase:
             }
             if filter_json:
                 params['Filter'] = filter_json
-            return self._starmap_pull(self.BASEURL + url, params=params, keyname='data')
+
+            r = self.s.get(self.BASEURL + url, params=params)
+            r.raise_for_status()
+            if r.json()['totalRowsWithFilter'] == 0:
+                raise NoMatchingDataError
+            return r.json()['data']
 
         # first do a call with zero retrieved data to know how much data is available, then pull all at once
         params = {
