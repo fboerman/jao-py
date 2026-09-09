@@ -13,7 +13,7 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.7.9"
+__version__ = "0.7.10"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -101,7 +101,7 @@ class JaoPublicationToolClientBase:
         else:
             filter_json = json.dumps({})
 
-        if os.getenv('JAO_EXPERIMENTAL_NO_PAGINATION', '0') == '1':
+        if os.getenv('JAO_EXPERIMENTAL_NO_PAGINATION', '0') == '1' and url != 'fbDomainShadowPrice':
             params = {
                 "FromUtc": mtu.isoformat(),
                 "ToUtc": (mtu + pd.Timedelta(hours=1)).isoformat()
