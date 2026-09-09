@@ -13,7 +13,7 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.7.8"
+__version__ = "0.7.9"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -99,14 +99,14 @@ class JaoPublicationToolClientBase:
         if len(filter) != 0:
             filter_json = json.dumps(filter)
         else:
-            filter_json = None
+            filter_json = json.dumps({})
 
         if os.getenv('JAO_EXPERIMENTAL_NO_PAGINATION', '0') == '1':
             params = {
                 "FromUtc": mtu.isoformat(),
                 "ToUtc": (mtu + pd.Timedelta(hours=1)).isoformat()
             }
-            if filter_json:
+            if filter_json or self.NORDIC: # for nordic api always send filter
                 params['Filter'] = filter_json
 
             r = self.s.get(self.BASEURL + url, params=params)
@@ -122,7 +122,7 @@ class JaoPublicationToolClientBase:
                 "Skip": 0,
                 "Take": 0,
             }
-        if filter_json:
+        if filter_json or self.NORDIC:  # for nordic api always send filter
             params['Filter'] = filter_json
 
         r = self.s.get(
