@@ -13,7 +13,7 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.7.10"
+__version__ = "0.7.11"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -356,7 +356,7 @@ class JaoPublicationToolClient(JaoPublicationToolClientBase):
 
 class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def _query_mirror(self, name: str, date: str) -> pd.DataFrame:
-        r = requests.get(f'https://mirror.flowbased.eu/dacc/{name}/{date}')
+        r = requests.get(f'https://fb.amunmirror.eu/dacc/{name}/{date}')
         if r.status_code != 200:
             return None
 
@@ -374,7 +374,7 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
         use_mirror: bool = False,
     ) -> pd.DataFrame:
         """
-        when use_mirror (or JAO_USE_MIRROR=1 in env) is set the whole day is returned from mirror.flowbased.eu
+        when use_mirror (or JAO_USE_MIRROR=1 in env) is set the whole day is returned from fb.amunmirror.eu
 
         """
         if (use_mirror or os.getenv('JAO_USE_MIRROR', '0') == '1') and self.version is None:
@@ -398,7 +398,7 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
         use_mirror: bool = False,
     ) -> pd.DataFrame:
         """
-        when use_mirror (or JAO_USE_MIRROR=1 in env) is set the whole day is returned from mirror.flowbased.eu
+        when use_mirror (or JAO_USE_MIRROR=1 in env) is set the whole day is returned from fb.amunmirror.eu
 
         """
         if (use_mirror or os.environ.get('JAO_USE_MIRROR', '0') == '1') and self.version is None:
