@@ -354,6 +354,12 @@ class JaoPublicationToolClient(JaoPublicationToolClientBase):
             type='congestionIncome'
         )
 
+    def query_atc(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> list[dict]:
+        return self._query_base_fromto(
+            d_from=d_from, d_to=d_to,
+            type='atc'
+        )
+
 class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def _query_mirror(self, name: str, date: str) -> pd.DataFrame:
         r = requests.get(f'https://fb.amunmirror.eu/dacc/{name}/{date}')
@@ -524,4 +530,9 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def query_congestion_income(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
         return parse_base_output(
             super().query_congestion_income(d_from=d_from, d_to=d_to)
+        )
+
+    def query_atc(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
+        return parse_base_output(
+            super().query_atc(d_from=d_from, d_to=d_to)
         )
