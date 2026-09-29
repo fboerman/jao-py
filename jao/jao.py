@@ -13,7 +13,7 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.7.11"
+__version__ = "0.8.0"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -370,17 +370,8 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
         presolved: bool = None,
         cne: str = None,
         co: str = None,
-        tso: str | list[str] | None = None,
-        use_mirror: bool = False,
+        tso: str | list[str] | None = None
     ) -> pd.DataFrame:
-        """
-        when use_mirror (or JAO_USE_MIRROR=1 in env) is set the whole day is returned from fb.amunmirror.eu
-
-        """
-        if (use_mirror or os.getenv('JAO_USE_MIRROR', '0') == '1') and self.version is None:
-            df = self._query_mirror(name='final_domain', date=mtu.tz_convert('Europe/Amsterdam').strftime('%Y-%m-%d'))
-            if df is not None:
-                return df
 
         return parse_final_domain(
             super().query_final_domain(
@@ -388,9 +379,9 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
             )
         )
 
-    def query_prefinal_domain(
+    def query_final_domain_day(
         self,
-        mtu: pd.Timestamp,
+        day: pd.Timestamp,
         presolved: bool = None,
         cne: str = None,
         co: str = None,
@@ -398,19 +389,68 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
         use_mirror: bool = False,
     ) -> pd.DataFrame:
         """
-        when use_mirror (or JAO_USE_MIRROR=1 in env) is set the whole day is returned from fb.amunmirror.eu
-
+        this function is a simple utility to call query_final_domain in a loop
+        the hour of the timestamp is ignored here
+        when use_mirror (or JAO_USE_MIRROR=1 in env) is set data is returned from fb.amunmirror.eu
+        when using mirror all filters are ignored!
         """
-        if (use_mirror or os.environ.get('JAO_USE_MIRROR', '0') == '1') and self.version is None:
-            df = self._query_mirror(name='prefinal_domain', date=mtu.tz_convert('Europe/Amsterdam').strftime('%Y-%m-%d'))
+        if (use_mirror or os.getenv('JAO_USE_MIRROR', '0') == '1') and self.version is None and not self.NORDIC:
+            df = self._query_mirror(name='final_domain', date=day.tz_convert('Europe/Amsterdam').strftime('%Y-%m-%d'))
             if df is not None:
                 return df
+
+        df = []
+        for mtu in pd.date_range(day.strftime('%Y-%m-%d'), day.strftime('%Y-%m-%d 23:59'), freq='h', tz='Europe/Amsterdam'):
+            df.append(parse_final_domain(
+                super().query_final_domain(
+                    mtu=mtu, presolved=presolved, cne=cne, co=co, tso=tso
+                )
+            ))
+        return pd.concat(df)
+
+    def query_prefinal_domain(
+        self,
+        mtu: pd.Timestamp,
+        presolved: bool = None,
+        cne: str = None,
+        co: str = None,
+        tso: str | list[str] | None = None
+    ) -> pd.DataFrame:
 
         return parse_final_domain(
             super().query_prefinal_domain(
                 mtu=mtu, presolved=presolved, cne=cne, co=co, tso=tso
             )
         )
+
+    def query_prefinal_domain_day(
+        self,
+        day: pd.Timestamp,
+        cne: str = None,
+        co: str = None,
+        tso: str | list[str] | None = None,
+        use_mirror: bool = False,
+    ) -> pd.DataFrame:
+        """
+        this function is a simple utility to call query_final_domain in a loop
+        the hour of the timestamp is ignored here
+        when use_mirror (or JAO_USE_MIRROR=1 in env) is set data is returned from fb.amunmirror.eu
+        when using mirror all filters are ignored!
+        """
+        if (use_mirror or os.getenv('JAO_USE_MIRROR', '0') == '1') and self.version is None and not self.NORDIC:
+            df = self._query_mirror(name='prefinal_domain', date=day.tz_convert('Europe/Amsterdam').strftime('%Y-%m-%d'))
+            if df is not None:
+                return df
+
+        df = []
+        for mtu in pd.date_range(day.strftime('%Y-%m-%d'), day.strftime('%Y-%m-%d 23:59'), freq='h', tz='Europe/Amsterdam'):
+            df.append(parse_final_domain(
+                super().query_prefinal_domain(
+                    mtu=mtu, cne=cne, co=co, tso=tso
+                )
+            ))
+        return pd.concat(df)
+
 
     def query_initial_domain(
         self,
