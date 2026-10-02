@@ -107,19 +107,19 @@ class JaoPublicationToolClientBase:
         else:
             filter_json = json.dumps({})
 
-        if os.getenv('JAO_EXPERIMENTAL_NO_PAGINATION', '0') == '1' and url != 'fbDomainShadowPrice':
-            params = {
-                "FromUtc": mtu.isoformat(),
-                "ToUtc": (mtu + pd.Timedelta(hours=1)).isoformat()
-            }
-            if filter_json or self.NORDIC: # for nordic api always send filter
-                params['Filter'] = filter_json
-
-            r = self.s.get(self.BASEURL + url, params=params)
-            r.raise_for_status()
-            if r.json()['totalRowsWithFilter'] == 0:
-                raise NoMatchingDataError
-            return r.json()['data']
+        # if os.getenv('JAO_EXPERIMENTAL_NO_PAGINATION', '0') == '1' and url != 'fbDomainShadowPrice':
+        #     params = {
+        #         "FromUtc": mtu.isoformat(),
+        #         "ToUtc": (mtu + pd.Timedelta(hours=1)).isoformat()
+        #     }
+        #     if filter_json or self.NORDIC: # for nordic api always send filter
+        #         params['Filter'] = filter_json
+        #
+        #     r = self.s.get(self.BASEURL + url, params=params)
+        #     r.raise_for_status()
+        #     if r.json()['totalRowsWithFilter'] == 0:
+        #         raise NoMatchingDataError
+        #     return r.json()['data']
 
         # first do a call with zero retrieved data to know how much data is available, then pull all at once
         params = {
