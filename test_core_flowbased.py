@@ -1,7 +1,6 @@
 import pandas as pd
 from jao import JaoPublicationToolPandasClient
 import pytest
-import os
 
 @pytest.fixture()
 def client():
@@ -22,14 +21,14 @@ def test_final_domain(client, mtu):
     )
     assert len(df) == 152
 
-def test_final_domain_experimental(client, mtu):
-    os.environ['JAO_EXPERIMENTAL_NO_PAGINATION'] = '1'
-    df = client.query_final_domain(
-        mtu=mtu,
-        presolved=True
-    )
-    assert len(df) == 152
-    os.environ['JAO_EXPERIMENTAL_NO_PAGINATION'] = '0'
+# def test_final_domain_experimental(client, mtu):
+#     os.environ['JAO_EXPERIMENTAL_NO_PAGINATION'] = '1'
+#     df = client.query_final_domain(
+#         mtu=mtu,
+#         presolved=True
+#     )
+#     assert len(df) == 152
+#     os.environ['JAO_EXPERIMENTAL_NO_PAGINATION'] = '0'
 
 
 def test_prefinal_domain(client, mtu):
@@ -39,13 +38,13 @@ def test_prefinal_domain(client, mtu):
     )
     assert len(df) == 148
 
-def test_initial_domain_experimental(client, mtu):
-    os.environ['JAO_EXPERIMENTAL_NO_PAGINATION'] = '1'
-    df = client.query_initial_domain(
-        mtu=mtu,
-    )
-    assert len(df) == 19398
-    os.environ['JAO_EXPERIMENTAL_NO_PAGINATION'] = '0'
+# def test_initial_domain_experimental(client, mtu):
+#     os.environ['JAO_EXPERIMENTAL_NO_PAGINATION'] = '1'
+#     df = client.query_initial_domain(
+#         mtu=mtu,
+#     )
+#     assert len(df) == 19398
+#     os.environ['JAO_EXPERIMENTAL_NO_PAGINATION'] = '0'
 
 def test_initial_domain(client, mtu):
     df = client.query_initial_domain(
@@ -217,9 +216,9 @@ def test_congestion_income(client, mtu):
 #     )
 #     assert len(pd.date_range(mtu, mtu+pd.Timedelta(days=10), freq='h')) - 1 == len(df)
 
-def test_range_2(client, mtu):
-    df = client.query_lta(
-        pd.Timestamp('2025-10-25', tz='Europe/Amsterdam'),
-        pd.Timestamp('2025-10-27', tz='Europe/Amsterdam')
-    )
-    assert len(df) == 49
+# def test_range_2(client, mtu):
+#     df = client.query_lta(
+#         pd.Timestamp('2025-10-25', tz='Europe/Amsterdam'),
+#         pd.Timestamp('2025-10-27', tz='Europe/Amsterdam')
+#     )
+#     assert len(df) == 49

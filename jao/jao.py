@@ -13,9 +13,15 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.8.0"
+__version__ = "0.8.1"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
+
+# since september 2026 some endpoints are forced to have a pagination setup. to prevent making invalid queries this is hardcoded config in this package
+PAGINATED_ENDPOINTS = [
+    'shadowPrices',
+    'validationReductions'
+]
 
 
 TSO_ALIASES = {
@@ -120,7 +126,7 @@ class JaoPublicationToolClientBase:
                 "FromUtc": mtu.isoformat(),
                 "ToUtc": (mtu + pd.Timedelta(hours=1)).isoformat(),
                 "Skip": 0,
-                "Take": 0,
+                "Take": 1,
             }
         if filter_json or self.NORDIC:  # for nordic api always send filter
             params['Filter'] = filter_json
@@ -166,10 +172,40 @@ class JaoPublicationToolClientBase:
         return list(itertools.chain(*results))
 
     def _query_call(self, url: str, type: str, d_from: pd.Timestamp, d_to: pd.Timestamp):
-        return self.s.get(url + type, params={
+        def get(final_url, params):
+            r = self.s.get(final_url, params=params)
+
+            if r.status_code == 429 and self.RATE_LIMIT_HANDLER > 0:
+                # running into rate limit, then just wait a minute. This is a VERY naive way of handling things but it works
+                # if you dont want this set DISABLE_RATE_LIMIT_HANDLER=1 and handle 429 yourself
+                sleep(self.RATE_LIMIT_HANDLER)
+                r = self.s.get(final_url, params=params)
+
+            r.raise_for_status()
+            return r.json()
+
+        params = {
             'FromUTC': d_from.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z'),
             'ToUTC': d_to.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z')
-        })
+        }
+
+        if type in PAGINATED_ENDPOINTS:
+            data = []
+            d = get(url + type, params | {
+                'Skip': 0,
+                'Take': 1
+            })
+            total_num_data = d['totalRowsWithFilter']
+            for i in range(0, total_num_data, 5000):
+                data += get(url + type, params | {
+                    'Skip': i,
+                    'Take': 5000
+                })['data']
+
+            return data
+
+        else:
+            return get(url + type, params=params)['data']
 
     def _query_base_fromto(self, d_from: pd.Timestamp, d_to: pd.Timestamp, type: str, split_days=True) -> list[dict]:
         if type in ['monitoring']:
@@ -189,24 +225,7 @@ class JaoPublicationToolClientBase:
             d_to_part = pd.Timestamp((day+pd.Timedelta(days=1)).strftime('%Y-%m-%d 23:59'), tz='Europe/Amsterdam')
             if d_to_part > d_to:
                 d_to_part = d_to
-            r = self._query_call(url, type, d_from_part, d_to_part)
-            if r.status_code == 429 and self.RATE_LIMIT_HANDLER > 0:
-                # running into rate limit, then just wait a minute. This is a VERY naive way of handling things but it works
-                # if you dont want this set DISABLE_RATE_LIMIT_HANDLER=1 and handle 429 yourself
-                sleep(self.RATE_LIMIT_HANDLER)
-                r = self._query_call(url, type, d_from_part, d_to_part)
-            if r.status_code == 400:
-                # at dst it is possible to get 400 error because jao thinks its more days then 2
-                # simply try both of days seperate
-                for d in pd.date_range(d_from_part, d_to_part):
-                    r = self._query_call(url, type,
-                                         pd.Timestamp(d.strftime('%Y-%m-%d'), tz='Europe/Amsterdam'),
-                                         pd.Timestamp(d.strftime('%Y-%m-%d 23:59'), tz='Europe/Amsterdam'))
-                    r.raise_for_status()
-                    data_total += r.json()['data']
-                continue
-            r.raise_for_status()
-            data_total += r.json()['data']
+            data_total += self._query_call(url, type, d_from_part, d_to_part)
 
         if len(data_total) == 0:
             raise NoMatchingDataError
