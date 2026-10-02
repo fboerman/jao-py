@@ -204,8 +204,7 @@ class JaoPublicationToolClientBase:
 
             return data
 
-        else:
-            return get(url + type, params=params)['data']
+        return get(url + type, params=params)['data']
 
     def _query_base_fromto(self, d_from: pd.Timestamp, d_to: pd.Timestamp, type: str, split_days=True) -> list[dict]:
         if type in ['monitoring']:
