@@ -381,6 +381,12 @@ class JaoPublicationToolClient(JaoPublicationToolClientBase):
             type='atc'
         )
 
+    def query_reference_netposition(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> list[dict]:
+        return self._query_base_fromto(
+            d_from=d_from, d_to=d_to,
+            type='referenceNetPosition'
+        )
+
 class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def _query_mirror(self, name: str, date: str) -> pd.DataFrame:
         r = requests.get(f'https://fb.amunmirror.eu/dacc/{name}/{date}')
@@ -597,3 +603,9 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
         return parse_base_output(
             super().query_atc(d_from=d_from, d_to=d_to)
         )
+
+    def query_reference_netposition(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
+        return parse_base_output(
+            super().query_reference_netposition(d_from=d_from, d_to=d_to)
+        ).rename(columns=lambda c: c.replace('globalNetPosition_', ''))
+

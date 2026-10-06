@@ -230,3 +230,11 @@ def test_query_atc(client, mtu):
 #         pd.Timestamp('2025-10-27', tz='Europe/Amsterdam')
 #     )
 #     assert len(df) == 49
+
+def test_query_reference_netposition(client, mtu):
+    df = client.query_reference_netposition(
+        d_from=mtu,
+        d_to=mtu + pd.Timedelta(hours=1)
+    )
+    assert len(df) == 1
+    assert len(df.columns) == 17
