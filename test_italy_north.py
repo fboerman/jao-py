@@ -57,3 +57,11 @@ def test_query_allocation_constraint(client, mtu, dayahead):
     )
     assert len(df) == 1
     assert len(df.columns) == 5
+
+def test_query_atc(client, mtu):
+    df = client.query_atc(
+        d_from=mtu,
+        d_to=mtu + pd.Timedelta(hours=1)
+    )
+    assert len(df) == 4
+    assert len(df.columns) == 6

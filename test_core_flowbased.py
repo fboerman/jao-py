@@ -216,6 +216,14 @@ def test_congestion_income(client, mtu):
 #     )
 #     assert len(pd.date_range(mtu, mtu+pd.Timedelta(days=10), freq='h')) - 1 == len(df)
 
+def test_query_atc(client, mtu):
+    df = client.query_atc(
+        d_from=mtu,
+        d_to=mtu + pd.Timedelta(hours=1)
+    )
+    assert len(df) == 4
+    assert len(df.columns) == 12
+
 # def test_range_2(client, mtu):
 #     df = client.query_lta(
 #         pd.Timestamp('2025-10-25', tz='Europe/Amsterdam'),

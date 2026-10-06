@@ -48,6 +48,14 @@ class JaoPublicationToolItalyNorth(JaoPublicationToolClientBase):
             type='CCR_allocationConstraint' if dayahead else "CCR_idAllocationConstraint"
         )
 
+    def query_atc(self,
+                            d_from: pd.Timestamp,
+                            d_to: pd.Timestamp,
+                            ) -> list[dict]:
+        return self._query_base_fromto(
+            d_from=d_from, d_to=d_to,
+            type="DA_atc"
+        )
 
 
 class JaoPublicationToolPandasItalyNorth(JaoPublicationToolItalyNorth):
@@ -89,4 +97,12 @@ class JaoPublicationToolPandasItalyNorth(JaoPublicationToolItalyNorth):
                              ) -> pd.DataFrame:
         return parse_base_output(
             super().query_allocation_constraint(d_from=d_from, d_to=d_to, dayahead=dayahead)
+        )
+
+    def query_atc(self,
+                             d_from: pd.Timestamp,
+                             d_to: pd.Timestamp,
+                             ) -> pd.DataFrame:
+        return parse_base_output(
+            super().query_atc(d_from=d_from, d_to=d_to)
         )
