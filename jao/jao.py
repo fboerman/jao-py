@@ -13,9 +13,15 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.7.10"
+__version__ = "0.8.1"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
+
+# since september 2026 some endpoints are forced to have a pagination setup. to prevent making invalid queries this is hardcoded config in this package
+PAGINATED_ENDPOINTS = [
+    'shadowPrices',
+    'validationReductions'
+]
 
 
 TSO_ALIASES = {
@@ -101,26 +107,26 @@ class JaoPublicationToolClientBase:
         else:
             filter_json = json.dumps({})
 
-        if os.getenv('JAO_EXPERIMENTAL_NO_PAGINATION', '0') == '1' and url != 'fbDomainShadowPrice':
-            params = {
-                "FromUtc": mtu.isoformat(),
-                "ToUtc": (mtu + pd.Timedelta(hours=1)).isoformat()
-            }
-            if filter_json or self.NORDIC: # for nordic api always send filter
-                params['Filter'] = filter_json
-
-            r = self.s.get(self.BASEURL + url, params=params)
-            r.raise_for_status()
-            if r.json()['totalRowsWithFilter'] == 0:
-                raise NoMatchingDataError
-            return r.json()['data']
+        # if os.getenv('JAO_EXPERIMENTAL_NO_PAGINATION', '0') == '1' and url != 'fbDomainShadowPrice':
+        #     params = {
+        #         "FromUtc": mtu.isoformat(),
+        #         "ToUtc": (mtu + pd.Timedelta(hours=1)).isoformat()
+        #     }
+        #     if filter_json or self.NORDIC: # for nordic api always send filter
+        #         params['Filter'] = filter_json
+        #
+        #     r = self.s.get(self.BASEURL + url, params=params)
+        #     r.raise_for_status()
+        #     if r.json()['totalRowsWithFilter'] == 0:
+        #         raise NoMatchingDataError
+        #     return r.json()['data']
 
         # first do a call with zero retrieved data to know how much data is available, then pull all at once
         params = {
                 "FromUtc": mtu.isoformat(),
                 "ToUtc": (mtu + pd.Timedelta(hours=1)).isoformat(),
                 "Skip": 0,
-                "Take": 0,
+                "Take": 1,
             }
         if filter_json or self.NORDIC:  # for nordic api always send filter
             params['Filter'] = filter_json
@@ -166,10 +172,39 @@ class JaoPublicationToolClientBase:
         return list(itertools.chain(*results))
 
     def _query_call(self, url: str, type: str, d_from: pd.Timestamp, d_to: pd.Timestamp):
-        return self.s.get(url + type, params={
+        def get(final_url, params):
+            r = self.s.get(final_url, params=params)
+
+            if r.status_code == 429 and self.RATE_LIMIT_HANDLER > 0:
+                # running into rate limit, then just wait a minute. This is a VERY naive way of handling things but it works
+                # if you dont want this set DISABLE_RATE_LIMIT_HANDLER=1 and handle 429 yourself
+                sleep(self.RATE_LIMIT_HANDLER)
+                r = self.s.get(final_url, params=params)
+
+            r.raise_for_status()
+            return r.json()
+
+        params = {
             'FromUTC': d_from.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z'),
             'ToUTC': d_to.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z')
-        })
+        }
+
+        if type in PAGINATED_ENDPOINTS:
+            data = []
+            d = get(url + type, params | {
+                'Skip': 0,
+                'Take': 1
+            })
+            total_num_data = d['totalRowsWithFilter']
+            for i in range(0, total_num_data, 5000):
+                data += get(url + type, params | {
+                    'Skip': i,
+                    'Take': 5000
+                })['data']
+
+            return data
+
+        return get(url + type, params=params)['data']
 
     def _query_base_fromto(self, d_from: pd.Timestamp, d_to: pd.Timestamp, type: str, split_days=True) -> list[dict]:
         if type in ['monitoring']:
@@ -189,24 +224,7 @@ class JaoPublicationToolClientBase:
             d_to_part = pd.Timestamp((day+pd.Timedelta(days=1)).strftime('%Y-%m-%d 23:59'), tz='Europe/Amsterdam')
             if d_to_part > d_to:
                 d_to_part = d_to
-            r = self._query_call(url, type, d_from_part, d_to_part)
-            if r.status_code == 429 and self.RATE_LIMIT_HANDLER > 0:
-                # running into rate limit, then just wait a minute. This is a VERY naive way of handling things but it works
-                # if you dont want this set DISABLE_RATE_LIMIT_HANDLER=1 and handle 429 yourself
-                sleep(self.RATE_LIMIT_HANDLER)
-                r = self._query_call(url, type, d_from_part, d_to_part)
-            if r.status_code == 400:
-                # at dst it is possible to get 400 error because jao thinks its more days then 2
-                # simply try both of days seperate
-                for d in pd.date_range(d_from_part, d_to_part):
-                    r = self._query_call(url, type,
-                                         pd.Timestamp(d.strftime('%Y-%m-%d'), tz='Europe/Amsterdam'),
-                                         pd.Timestamp(d.strftime('%Y-%m-%d 23:59'), tz='Europe/Amsterdam'))
-                    r.raise_for_status()
-                    data_total += r.json()['data']
-                continue
-            r.raise_for_status()
-            data_total += r.json()['data']
+            data_total += self._query_call(url, type, d_from_part, d_to_part)
 
         if len(data_total) == 0:
             raise NoMatchingDataError
@@ -362,7 +380,7 @@ class JaoPublicationToolClient(JaoPublicationToolClientBase):
 
 class JaoPublicationToolPandasClient(JaoPublicationToolClient):
     def _query_mirror(self, name: str, date: str) -> pd.DataFrame:
-        r = requests.get(f'https://mirror.flowbased.eu/dacc/{name}/{date}')
+        r = requests.get(f'https://fb.amunmirror.eu/dacc/{name}/{date}')
         if r.status_code != 200:
             return None
 
@@ -376,17 +394,8 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
         presolved: bool = None,
         cne: str = None,
         co: str = None,
-        tso: str | list[str] | None = None,
-        use_mirror: bool = False,
+        tso: str | list[str] | None = None
     ) -> pd.DataFrame:
-        """
-        when use_mirror (or JAO_USE_MIRROR=1 in env) is set the whole day is returned from mirror.flowbased.eu
-
-        """
-        if (use_mirror or os.getenv('JAO_USE_MIRROR', '0') == '1') and self.version is None:
-            df = self._query_mirror(name='final_domain', date=mtu.tz_convert('Europe/Amsterdam').strftime('%Y-%m-%d'))
-            if df is not None:
-                return df
 
         return parse_final_domain(
             super().query_final_domain(
@@ -394,9 +403,9 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
             )
         )
 
-    def query_prefinal_domain(
+    def query_final_domain_day(
         self,
-        mtu: pd.Timestamp,
+        day: pd.Timestamp,
         presolved: bool = None,
         cne: str = None,
         co: str = None,
@@ -404,19 +413,68 @@ class JaoPublicationToolPandasClient(JaoPublicationToolClient):
         use_mirror: bool = False,
     ) -> pd.DataFrame:
         """
-        when use_mirror (or JAO_USE_MIRROR=1 in env) is set the whole day is returned from mirror.flowbased.eu
-
+        this function is a simple utility to call query_final_domain in a loop
+        the hour of the timestamp is ignored here
+        when use_mirror (or JAO_USE_MIRROR=1 in env) is set data is returned from fb.amunmirror.eu
+        when using mirror all filters are ignored!
         """
-        if (use_mirror or os.environ.get('JAO_USE_MIRROR', '0') == '1') and self.version is None:
-            df = self._query_mirror(name='prefinal_domain', date=mtu.tz_convert('Europe/Amsterdam').strftime('%Y-%m-%d'))
+        if (use_mirror or os.getenv('JAO_USE_MIRROR', '0') == '1') and self.version is None and not self.NORDIC:
+            df = self._query_mirror(name='final_domain', date=day.tz_convert('Europe/Amsterdam').strftime('%Y-%m-%d'))
             if df is not None:
                 return df
+
+        df = []
+        for mtu in pd.date_range(day.strftime('%Y-%m-%d'), day.strftime('%Y-%m-%d 23:59'), freq='h', tz='Europe/Amsterdam'):
+            df.append(parse_final_domain(
+                super().query_final_domain(
+                    mtu=mtu, presolved=presolved, cne=cne, co=co, tso=tso
+                )
+            ))
+        return pd.concat(df)
+
+    def query_prefinal_domain(
+        self,
+        mtu: pd.Timestamp,
+        presolved: bool = None,
+        cne: str = None,
+        co: str = None,
+        tso: str | list[str] | None = None
+    ) -> pd.DataFrame:
 
         return parse_final_domain(
             super().query_prefinal_domain(
                 mtu=mtu, presolved=presolved, cne=cne, co=co, tso=tso
             )
         )
+
+    def query_prefinal_domain_day(
+        self,
+        day: pd.Timestamp,
+        cne: str = None,
+        co: str = None,
+        tso: str | list[str] | None = None,
+        use_mirror: bool = False,
+    ) -> pd.DataFrame:
+        """
+        this function is a simple utility to call query_final_domain in a loop
+        the hour of the timestamp is ignored here
+        when use_mirror (or JAO_USE_MIRROR=1 in env) is set data is returned from fb.amunmirror.eu
+        when using mirror all filters are ignored!
+        """
+        if (use_mirror or os.getenv('JAO_USE_MIRROR', '0') == '1') and self.version is None and not self.NORDIC:
+            df = self._query_mirror(name='prefinal_domain', date=day.tz_convert('Europe/Amsterdam').strftime('%Y-%m-%d'))
+            if df is not None:
+                return df
+
+        df = []
+        for mtu in pd.date_range(day.strftime('%Y-%m-%d'), day.strftime('%Y-%m-%d 23:59'), freq='h', tz='Europe/Amsterdam'):
+            df.append(parse_final_domain(
+                super().query_prefinal_domain(
+                    mtu=mtu, cne=cne, co=co, tso=tso
+                )
+            ))
+        return pd.concat(df)
+
 
     def query_initial_domain(
         self,
