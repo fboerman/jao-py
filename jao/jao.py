@@ -13,7 +13,7 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.8.1"
+__version__ = "0.8.2"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -373,6 +373,9 @@ class JaoPublicationToolClient(JaoPublicationToolClientBase):
         )
 
     def query_atc(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> list[dict]:
+        # has different meaning depending on CCR
+        # for Core: ATCs on CORE external borders
+        # for ITN: IBWT -> ATC's
         return self._query_base_fromto(
             d_from=d_from, d_to=d_to,
             type='atc'
