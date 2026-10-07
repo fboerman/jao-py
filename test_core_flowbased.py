@@ -208,13 +208,20 @@ def test_congestion_income(client, mtu):
     assert len(df) == 4
     assert len(df.columns) == 60
 
-# # these two test if the splitting works as well as specific DST edge cases
-# def test_range(client, mtu):
-#     df = client.query_net_position_fromto(
-#         mtu,
-#         mtu + pd.Timedelta(days=10)
-#     )
-#     assert len(pd.date_range(mtu, mtu+pd.Timedelta(days=10), freq='h')) - 1 == len(df)
+# these two test if the splitting works as well as specific DST edge cases
+def test_range(client, mtu):
+    df = client.query_net_position_fromto(
+        mtu,
+        mtu + pd.Timedelta(days=10)
+    )
+    assert len(pd.date_range(mtu, mtu+pd.Timedelta(days=10), freq='15min')) - 1 == len(df)
+
+def test_range_2(client, mtu):
+    df = client.query_lta(
+        pd.Timestamp('2025-10-25', tz='Europe/Amsterdam'),
+        pd.Timestamp('2025-10-27', tz='Europe/Amsterdam')
+    )
+    assert len(df) == 49
 
 def test_query_atc(client, mtu):
     df = client.query_atc(
@@ -224,12 +231,7 @@ def test_query_atc(client, mtu):
     assert len(df) == 4
     assert len(df.columns) == 12
 
-# def test_range_2(client, mtu):
-#     df = client.query_lta(
-#         pd.Timestamp('2025-10-25', tz='Europe/Amsterdam'),
-#         pd.Timestamp('2025-10-27', tz='Europe/Amsterdam')
-#     )
-#     assert len(df) == 49
+
 
 def test_query_reference_netposition(client, mtu):
     df = client.query_reference_netposition(

@@ -13,7 +13,7 @@ from time import sleep
 
 
 __title__ = "jao-py"
-__version__ = "0.8.2"
+__version__ = "0.8.3"
 __author__ = "Frank Boerman"
 __license__ = "MIT"
 
@@ -180,6 +180,23 @@ class JaoPublicationToolClientBase:
                 # if you dont want this set DISABLE_RATE_LIMIT_HANDLER=1 and handle 429 yourself
                 sleep(self.RATE_LIMIT_HANDLER)
                 r = self.s.get(final_url, params=params)
+            if r.status_code == 400:
+                if r.json().get("title", '') == 'Invalid date range':
+                    # at dst it is possible to get 400 error because jao thinks its more days then 2
+                    # simply try both of days separate
+                    res = None
+                    for d in pd.date_range(d_from, d_to):
+                        params2 = params.copy()
+                        params2['FromUTC'] = d.tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z')
+                        params2['ToUTC'] = d.replace(hour=23, minute=59).tz_convert('UTC').strftime('%Y-%m-%dT%H:%M:%S.000Z')
+                        r = self.s.get(final_url, params=params2)
+                        r.raise_for_status()
+                        if res is None:
+                            res = r.json()
+                        else:
+                            res['data'] += r.json()['data']
+                    return res
+                r.raise_for_status()
 
             r.raise_for_status()
             return r.json()
