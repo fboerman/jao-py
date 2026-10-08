@@ -1,15 +1,12 @@
 from .jao import JaoPublicationToolPandasClient
 import pandas as pd
-from .parsers import parse_final_domain
+from .parsers import parse_final_domain, parse_base_output
 
 
 class JaoPublicationToolPandasNordics(JaoPublicationToolPandasClient):
     BASEURL = "https://publicationtool.jao.eu/nordic/api/data/"
 
     def query_allocationconstraint(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
-        raise NotImplementedError
-
-    def query_net_position(self, day: pd.Timestamp) -> pd.DataFrame:
         raise NotImplementedError
 
     def query_lta(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
@@ -35,3 +32,11 @@ class JaoPublicationToolPandasNordics(JaoPublicationToolPandasClient):
             df = pd.DataFrame(df[~pd.isna(df['shadow_price'])])
 
         return df
+
+    def query_border_flow_sdac(self, d_from: pd.Timestamp, d_to: pd.Timestamp) -> pd.DataFrame:
+        return parse_base_output(
+            self._query_base_fromto(
+                d_from=d_from, d_to=d_to,
+                type='borderFlowSDAC'
+            )
+        ).drop(columns=['lastModifiedOn']).rename(columns=lambda c: c.replace('border_', ''))
