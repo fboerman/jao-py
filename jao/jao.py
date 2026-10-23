@@ -14,7 +14,7 @@ from time import sleep
 
 __title__ = "jao-py"
 __version__ = "0.8.4"
-__author__ = "Frank Boerman"
+__author__ = "Frank Boerman-Lima"
 __license__ = "MIT"
 
 # since september 2026 some endpoints are forced to have a pagination setup. to prevent making invalid queries this is hardcoded config in this package
