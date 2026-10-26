@@ -38,7 +38,7 @@ def parse_monitoring(data: list[dict]) -> pd.DataFrame:
         df['businessDay'] = pd.to_datetime(df['businessDayUtc'], utc=True).dt.tz_convert('Europe/Amsterdam').dt.date
         df = df.drop(columns=['businessDayUtc'])
     for c in ['deadline', 'lastModifiedOn']:
-        df[c] = pd.to_datetime(df[c], utc=True).dt.tz_convert('Europe/Amsterdam')
+        df[c] = pd.to_datetime(df[c], utc=True, format='ISO8601').dt.tz_convert('Europe/Amsterdam')
     return df.drop(columns=['id'])
 
 
