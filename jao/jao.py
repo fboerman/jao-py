@@ -14,7 +14,7 @@ from time import sleep
 
 __title__ = "jao-py"
 __author__ = "Frank Boerman-Lima"
-__version__ = "0.8.5"
+__version__ = "0.8.6"
 __license__ = "MIT"
 
 # since september 2026 some endpoints are forced to have a pagination setup. to prevent making invalid queries this is hardcoded config in this package
@@ -236,9 +236,8 @@ class JaoPublicationToolClientBase:
             d_from_part = day
             if d_from_part < d_from:
                 d_from_part = d_from
-            # for DST days, make sure we always query a full day by doing a string conversion trick
-            # looks a bit ugly, works great
-            d_to_part = pd.Timestamp((day+pd.Timedelta(days=1)).strftime('%Y-%m-%d 23:59'), tz='Europe/Amsterdam')
+            # Advance calendar days so DST does not skip or overlap dates.
+            d_to_part = (day + pd.DateOffset(days=1)).replace(hour=23, minute=59)
             if d_to_part > d_to:
                 d_to_part = d_to
             data_total += self._query_call(url, type, d_from_part, d_to_part)
