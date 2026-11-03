@@ -14,7 +14,7 @@ from time import sleep
 
 __title__ = "jao-py"
 __author__ = "Frank Boerman-Lima"
-__version__ = "0.8.6"
+__version__ = "0.8.7"
 __license__ = "MIT"
 
 # since september 2026 some endpoints are forced to have a pagination setup. to prevent making invalid queries this is hardcoded config in this package
@@ -173,7 +173,7 @@ class JaoPublicationToolClientBase:
 
     def _query_call(self, url: str, type: str, d_from: pd.Timestamp, d_to: pd.Timestamp):
         def get(final_url, params):
-            r = self.s.get(final_url, params=params)
+            r = self.s.get(final_url, params=params, timeout=os.getenv('JAO_MONITORING_REQUEST_TIMEOUT',15) if type == 'monitoring' else os.getenv('JAO_REQUEST_TIMEOUT', 5*60))
 
             if r.status_code == 429 and self.RATE_LIMIT_HANDLER > 0:
                 # running into rate limit, then just wait a minute. This is a VERY naive way of handling things but it works

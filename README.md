@@ -46,6 +46,16 @@ JAO currently has a fixed rate limiting of 100 requests per minute, if you surpa
 The library has a naive way of handling this by sleeping for ```RATE_LIMIT_HANDLER``` seconds, which is by default 60 seconds.  
 If you want to disable this set ```RATE_LIMIT_HANDLER``` to 0 through environment variables and the library will throw a HTTP exception that you can handle yourself.
 
+## Environment Variable Config
+The following environment variables can be set to configure the package:
+
+|Variable|Default|Explanation|
+|---------|-------|-----------|
+|RATE_LIMIT_HANDLER|60|See Rate Limiter section above|
+|JAO_MONITORING_REQUEST_TIMEOUT|15|Timeout used in request for the monitoring page|
+|JAO_REQUEST_TIMEOUT|300|Timeout used for all requests except monitoring page|
+
+
 ### Experimental Features
 #### Mirror
 This package provides support for the experimental data mirror [fb.amunmirror.eu](https://fb.amunmirror.eu/). 
