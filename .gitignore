@@ -4,3 +4,4 @@ venv
 secret.py
 *.egg-info
 dist
+.env
