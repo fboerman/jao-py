@@ -40,6 +40,10 @@ class JaoAPIClient:
         # prepare the specific input arguments needed, start day the day before the months begin
         # end date the last day of the month
 
+        if horizon == 'Weekly':
+            # weekly must start on monday
+            query_date += relativedelta(weekday=0)
+
         if horizon == "Monthly":
             month_begin = query_date.replace(day=1)
             month_end = query_date.replace(day=monthrange(query_date.year, query_date.month)[1])
@@ -150,6 +154,10 @@ class JaoAPIClient:
 
         data = []
         m = date_from
+        if horizon == "Weekly":
+            # query_auction_details moves weekly queries to the Monday of the
+            # requested week; normalise here so every step advances one week
+            m += relativedelta(weekday=0)
         while m <= date_to:
             m_details = self.query_auction_details(corridor=corridor, query_date=m, horizon=horizon)
             m_data = {
