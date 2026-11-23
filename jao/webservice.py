@@ -173,7 +173,7 @@ class JaoAPIClient:
             else:
                 m += relativedelta(days=7)
         df = pd.DataFrame(data)
-        df = df['resoldCapacity'].fillna(0)
+        df['resoldCapacity'] = df['resoldCapacity'].astype(float).fillna(0)
         df['nonAllocatedCapacity'] = df['offeredCapacity'] - df['allocatedCapacity']
 
         return df
