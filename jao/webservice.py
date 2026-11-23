@@ -27,7 +27,7 @@ class JaoAPIClient:
         r.raise_for_status()
         return [x['value'] for x in r.json()]
 
-    def query_auction_details_by_month(self, corridor: str, month: date, horizon: str, shadow_auctions_only: bool = False) -> dict:
+    def query_auction_details(self, corridor: str, query_date: date, horizon: str, shadow_auctions_only: bool = False) -> dict:
         """
         get the auction data for a specified month. gives basically everything but the bids themselves
 
@@ -40,16 +40,13 @@ class JaoAPIClient:
         # prepare the specific input arguments needed, start day the day before the months begin
         # end date the last day of the month
 
-        month_begin = month.replace(day=1)
-        month_end = month.replace(day=monthrange(month.year, month.month)[1])
-        if horizon == 'Yearly':
-            r = self.s.get(self.BASEURL + 'getauctions', params={
-                'corridor': corridor,
-                'fromdate': month.strftime('%Y-%m-%d'),
-                'horizon': horizon,
-                'shadow': int(shadow_auctions_only)
-            })
-        else:
+        if horizon == 'Weekly':
+            # weekly must start on monday
+            query_date += relativedelta(weekday=0)
+
+        if horizon == "Monthly":
+            month_begin = query_date.replace(day=1)
+            month_end = query_date.replace(day=monthrange(query_date.year, query_date.month)[1])
             r = self.s.get(self.BASEURL + 'getauctions', params={
                 'corridor': corridor,
                 'fromdate': (month_begin - timedelta(days=1)).strftime("%Y-%m-%d"),
@@ -57,17 +54,99 @@ class JaoAPIClient:
                 'todate': month_end.strftime("%Y-%m-%d"),
                 'shadow': int(shadow_auctions_only)
             })
+        elif horizon == 'Yearly':
+            r = self.s.get(self.BASEURL + 'getauctions', params={
+                'corridor': corridor,
+                'fromdate': f"{query_date.year-1}-12-31",
+                'horizon': horizon,
+                'shadow': int(shadow_auctions_only)
+            })
+        else:
+            r = self.s.get(self.BASEURL + 'getauctions', params={
+                'corridor': corridor,
+                'fromdate': query_date.strftime("%Y-%m-%d-%H:%M:%S"),
+                'horizon': horizon,
+                'shadow': int(shadow_auctions_only)
+            })
 
+        # improves error feedback a lot
+        if r.status_code >= 400 and not r.reason:
+            r.reason = r.text
         r.raise_for_status()
 
         data = r.json()
-        # pretify the results since we know it is for monthly auction
-        data = data[0]
-        data = {**data, **data['results'][0], **data['products'][0]}
-        del data['results']
-        del data['products']
+
+        try:
+            # prettify the results to only show the first products and results
+            data = data[0]
+            data = {**data, **data['results'][0], **data['products'][0]}
+            del data['results']
+            del data['products']
+        except Exception:
+            print(data)
+            raise
 
         return data
+
+    def query_auction_details_by_month(self, corridor: str, query_date: date, horizon="Monthly", shadow_auctions_only: bool = False) -> dict:
+        return self.query_auction_details(corridor, query_date, horizon, shadow_auctions_only)
+
+    def query_auctions(self, corridor: str, date_from: date, date_to: date, horizon: str,
+                       shadow_auctions_only: bool = False, as_dict: bool = False) -> pd.DataFrame | list:
+        """
+        get all auctions whose delivery starts between date_from and date_to (both included)
+        with all their products and results
+
+        the range is requested in calendar-month windows, since the API answers at most 31 days
+        per request: a year of daily auctions takes 12 requests instead of 365
+
+        :param corridor: string of a valid jao corridor from query_corridors
+        :param date_from: datetime.date object of the first delivery day
+        :param date_to: datetime.date object of the last delivery day
+        :param horizon: string of a valid jao horizon from query_horizons
+        :param shadow_auctions_only: wether to only retrieve shadow auction results
+        :param as_dict: return the raw auction list instead of a dataframe
+        :return: dataframe with one row per auction product, results matched by productIdentification
+        """
+        auctions = []
+        start = date_from
+        while start <= date_to:
+            stop = min(start.replace(day=monthrange(start.year, start.month)[1]), date_to)
+            # the API selects on marketPeriodStart in UTC, which lies on the evening before
+            # the first delivery day
+            r = self.s.get(self.BASEURL + 'getauctions', params={
+                'corridor': corridor,
+                'fromdate': (start - timedelta(days=1)).strftime("%Y-%m-%d"),
+                'todate': stop.strftime("%Y-%m-%d"),
+                'horizon': horizon,
+                'shadow': int(shadow_auctions_only)
+            })
+            start = stop + timedelta(days=1)
+            # an empty window is answered with 400 instead of an empty list
+            if r.status_code == 400 and 'No Data found' in r.text:
+                continue
+            if r.status_code >= 400 and not r.reason:
+                r.reason = r.text
+            r.raise_for_status()
+            auctions.extend(r.json())
+
+        if as_dict:
+            return auctions
+
+        rows = []
+        for auction in auctions:
+            base = {k: v for k, v in auction.items() if not isinstance(v, list)}
+            base['id'] = base.pop('identification')
+            results = {x['productIdentification']: x for x in auction['results']}
+            for product in auction['products'] or [{}]:
+                result = results.get(product.get('productIdentification'), {})
+                rows.append({
+                    **base,
+                    **result,
+                    **product,
+                    'resultComment': result.get('comment'),
+                })
+        return pd.DataFrame(rows)
 
     def query_auction_bids_by_month(self, corridor: str, month: date, as_dict: bool = False) -> pd.DataFrame | dict:
         """
@@ -112,7 +191,7 @@ class JaoAPIClient:
             return r.json()
         return pd.DataFrame(r.json())
 
-    def query_auction_stats_months(self, month_from: date, month_to: date, corridor: str, horizon: str = 'Monthly') -> pd.DataFrame:
+    def query_auction_stats(self, date_from: date, date_to: date, corridor: str, horizon: str = 'Monthly') -> pd.DataFrame:
         """
         gets the following statistics for the give range of months (included both ends) in a dataframe:
         id
@@ -139,19 +218,40 @@ class JaoAPIClient:
                         'allocatedCapacity', 'resoldCapacity', 'requestedCapacity', 'auctionPrice']
 
         data = []
-        m = month_from
-        while m <= month_to:
-            m_details = self.query_auction_details_by_month(corridor=corridor, month=m, horizon=horizon)
+        m = date_from
+        if horizon == "Weekly":
+            # query_auction_details moves weekly queries to the Monday of the
+            # requested week; normalise here so every step advances one week
+            m += relativedelta(weekday=0)
+        while m <= date_to:
+            m_details = self.query_auction_details(corridor=corridor, query_date=m, horizon=horizon)
             m_data = {
                 'id': m_details['identification'],
                 'corridor': corridor,
-                'month': m.replace(day=1)
+                'date': m
             }
             m_data = {**m_data, **{k: v for k, v in m_details.items() if k in detail_keys}}
             data.append(m_data)
-            m += relativedelta(months=1)
+
+            if horizon == "Weekly":
+                m += relativedelta(weeks=1)
+            elif horizon == "Daily":
+                m += relativedelta(days=1)
+            elif horizon == "Monthly":
+                m += relativedelta(months=1)
+            elif horizon == "Yearly":
+                m += relativedelta(years=1)
+            elif horizon == "Intraday":
+                m += relativedelta(hours=1)
+            else:
+                m += relativedelta(days=7)
         df = pd.DataFrame(data)
-        df = df['resoldCapacity'].fillna(0)
+        df['resoldCapacity'] = df['resoldCapacity'].astype(float).fillna(0)
         df['nonAllocatedCapacity'] = df['offeredCapacity'] - df['allocatedCapacity']
 
         return df
+
+    def query_auction_stats_months(self, month_from: date, month_to: date, corridor: str, horizon: str = 'Monthly') -> pd.DataFrame:
+        month_from = month_from.replace(day=1)
+
+        return self.query_auction_stats(month_from, month_to, corridor, horizon)
