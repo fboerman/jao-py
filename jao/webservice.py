@@ -91,6 +91,63 @@ class JaoAPIClient:
     def query_auction_details_by_month(self, corridor: str, query_date: date, horizon="Monthly", shadow_auctions_only: bool = False) -> dict:
         return self.query_auction_details(corridor, query_date, horizon, shadow_auctions_only)
 
+    def query_auctions(self, corridor: str, date_from: date, date_to: date, horizon: str,
+                       shadow_auctions_only: bool = False, as_dict: bool = False) -> pd.DataFrame | list:
+        """
+        get all auctions whose delivery starts between date_from and date_to (both included)
+        with all their products and results
+
+        the range is requested in calendar-month windows, since the API answers at most 31 days
+        per request: a year of daily auctions takes 12 requests instead of 365
+
+        :param corridor: string of a valid jao corridor from query_corridors
+        :param date_from: datetime.date object of the first delivery day
+        :param date_to: datetime.date object of the last delivery day
+        :param horizon: string of a valid jao horizon from query_horizons
+        :param shadow_auctions_only: wether to only retrieve shadow auction results
+        :param as_dict: return the raw auction list instead of a dataframe
+        :return: dataframe with one row per auction product, results matched by productIdentification
+        """
+        auctions = []
+        start = date_from
+        while start <= date_to:
+            stop = min(start.replace(day=monthrange(start.year, start.month)[1]), date_to)
+            # the API selects on marketPeriodStart in UTC, which lies on the evening before
+            # the first delivery day
+            r = self.s.get(self.BASEURL + 'getauctions', params={
+                'corridor': corridor,
+                'fromdate': (start - timedelta(days=1)).strftime("%Y-%m-%d"),
+                'todate': stop.strftime("%Y-%m-%d"),
+                'horizon': horizon,
+                'shadow': int(shadow_auctions_only)
+            })
+            start = stop + timedelta(days=1)
+            # an empty window is answered with 400 instead of an empty list
+            if r.status_code == 400 and 'No Data found' in r.text:
+                continue
+            if r.status_code >= 400 and not r.reason:
+                r.reason = r.text
+            r.raise_for_status()
+            auctions.extend(r.json())
+
+        if as_dict:
+            return auctions
+
+        rows = []
+        for auction in auctions:
+            base = {k: v for k, v in auction.items() if not isinstance(v, list)}
+            base['id'] = base.pop('identification')
+            results = {x['productIdentification']: x for x in auction['results']}
+            for product in auction['products'] or [{}]:
+                result = results.get(product.get('productIdentification'), {})
+                rows.append({
+                    **base,
+                    **result,
+                    **product,
+                    'resultComment': result.get('comment'),
+                })
+        return pd.DataFrame(rows)
+
     def query_auction_bids_by_month(self, corridor: str, month: date, as_dict: bool = False) -> pd.DataFrame | dict:
         """
         wrapper function to construct the auction id since its predictable and
