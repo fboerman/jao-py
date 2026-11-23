@@ -69,14 +69,22 @@ class JaoAPIClient:
                 'shadow': int(shadow_auctions_only)
             })
 
+        # improves error feedback a lot
+        if r.status_code >= 400 and not r.reason:
+            r.reason = r.text
         r.raise_for_status()
 
         data = r.json()
-        # prettify the results to only show the first products and results
-        data = data[0]
-        data = {**data, **data['results'][0], **data['products'][0]}
-        del data['results']
-        del data['products']
+
+        try:
+            # prettify the results to only show the first products and results
+            data = data[0]
+            data = {**data, **data['results'][0], **data['products'][0]}
+            del data['results']
+            del data['products']
+        except Exception:
+            print(data)
+            raise
 
         return data
 
